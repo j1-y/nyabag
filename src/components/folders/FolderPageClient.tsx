@@ -1,6 +1,7 @@
 "use client";
 
-import { List, Grid } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconGrid, IconList } from "@/components/ui/icons";
 import { useMemo, useState } from "react";
 ;
 import { BookmarksProvider, useBookmarks } from "@/hooks/useBookmarks";
@@ -106,7 +107,7 @@ function FolderPageInner({
               aria-label="Switch to list view"
               title="List view"
             >
-              <List size={16} aria-hidden="true" />
+              <HugeIcon icon={IconList} size={18} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -116,7 +117,7 @@ function FolderPageInner({
               aria-label="Switch to grid view"
               title="Grid view"
             >
-              <Grid size={16} aria-hidden="true" />
+              <HugeIcon icon={IconGrid} size={18} aria-hidden="true" />
             </button>
           </div>
         }

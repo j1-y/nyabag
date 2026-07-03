@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowUpRight, ArrowRight, CheckCircle, Upload, LogOut, Loader2, User, X, Link as LinkIcon } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowRight, IconArrowUpRight, IconCheckCircle, IconClose, IconLink, IconLoader, IconLogout, IconUpload } from "@/components/ui/icons";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
-;
 import { createBookmark, signOut } from "@/lib/actions";
 
 type MobileBookmarkCaptureProps = {
@@ -166,7 +166,7 @@ export function MobileBookmarkCapture({
               <div className="mobile-capture-profile-separator" />
               <form action={signOut}>
                 <button type="submit" className="mobile-capture-profile-item mobile-capture-profile-danger" role="menuitem">
-                  <LogOut size={16} />
+                  <HugeIcon icon={IconLogout} size={18} />
                   Sign out
                 </button>
               </form>
@@ -200,7 +200,7 @@ export function MobileBookmarkCapture({
 
         <div className="mobile-capture-textarea-wrap">
           <div className="mobile-capture-textarea-label">
-            <LinkIcon size={12} aria-hidden="true" />
+            <HugeIcon icon={IconLink} size={18} aria-hidden="true" />
             <span>URLs</span>
           </div>
           <textarea
@@ -234,13 +234,13 @@ export function MobileBookmarkCapture({
           type="button"
         >
           <span className="mobile-capture-file-icon">
-            <Upload size={18} aria-hidden="true" />
+            <HugeIcon icon={IconUpload} size={18} aria-hidden="true" />
           </span>
           <span className="mobile-capture-file-copy">
             <span className="mobile-capture-file-title">Upload a file</span>
             <span className="mobile-capture-file-hint">TXT, CSV or Markdown</span>
           </span>
-          <ArrowRight className="mobile-capture-file-chevron" size={18} aria-hidden="true" />
+          <HugeIcon icon={IconArrowRight} className="mobile-capture-file-chevron" size={18} aria-hidden="true" />
         </button>
 
         <input
@@ -259,9 +259,9 @@ export function MobileBookmarkCapture({
             type="button"
           >
             {isPending ? (
-              <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+              <HugeIcon icon={IconLoader} size={18} style={{ animation: "spin 1s linear infinite" }} />
             ) : (
-              <ArrowUpRight size={17} />
+              <HugeIcon icon={IconArrowUpRight} size={18} />
             )}
             {isPending ? "Saving..." : "Save to bookmarks"}
           </button>
@@ -272,13 +272,13 @@ export function MobileBookmarkCapture({
             type="button"
             aria-label="Clear"
           >
-            <X size={19} aria-hidden="true" />
+            <HugeIcon icon={IconClose} size={18} aria-hidden="true" />
           </button>
         </div>
 
         {savedCount > 0 && (
           <div className="mobile-capture-success" role="status">
-            <CheckCircle size={16} fill="currentColor" />
+            <HugeIcon icon={IconCheckCircle} size={18} />
             {savedCount} bookmark{savedCount === 1 ? "" : "s"} saved - ready on your desktop.
           </div>
         )}

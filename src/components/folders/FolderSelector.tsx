@@ -1,6 +1,7 @@
 "use client";
 
-import { Folder } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconFolder } from "@/components/ui/icons";
 import { useEffect, useState, useTransition } from "react";
 ;
 import { getBookmarkFolders } from "@/lib/folder-actions";
@@ -47,7 +48,7 @@ export function FolderSelector({
   return (
     <div className={`folder-selector ${className}`}>
       <span className="folder-selector-icon" aria-hidden="true">
-        <Folder size={14} />
+        <HugeIcon icon={IconFolder} size={18} />
       </span>
       <select
         id={id}

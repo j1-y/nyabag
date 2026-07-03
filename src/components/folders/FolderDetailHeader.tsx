@@ -1,6 +1,7 @@
 "use client";
 
-import { FolderPlus, Pencil, Plus, Trash2, Inbox } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconAdd, IconDelete, IconFolderAdd, IconPencil } from "@/components/ui/icons";
 import { useState } from "react";
 import { FolderCreateDialog } from "./FolderCreateDialog";
 import { FolderRenameDialog } from "./FolderRenameDialog";
@@ -50,7 +51,7 @@ export function FolderDetailHeader({
                 onClick={onAddBookmark}
                 aria-label="Add bookmark"
               >
-                <Plus size={14} />
+                <HugeIcon icon={IconAdd} size={18} />
                 <span>Add bookmark</span>
               </button>
           )}
@@ -83,7 +84,7 @@ export function FolderDetailHeader({
               onClick={onAddBookmark}
               aria-label="Add bookmark"
             >
-              <Plus size={14} />
+              <HugeIcon icon={IconAdd} size={18} />
               <span>Add bookmark</span>
             </button>
           )}
@@ -94,7 +95,7 @@ export function FolderDetailHeader({
             aria-label="Create subfolder"
             title="New subfolder"
           >
-            <FolderPlus size={15} />
+            <HugeIcon icon={IconFolderAdd} size={18} />
             <span>New subfolder</span>
           </button>
           <button
@@ -104,7 +105,7 @@ export function FolderDetailHeader({
             aria-label="Rename folder"
             title="Rename"
           >
-            <Pencil size={15} />
+            <HugeIcon icon={IconPencil} size={18} />
             <span>Rename</span>
           </button>
           <button
@@ -114,7 +115,7 @@ export function FolderDetailHeader({
             aria-label="Delete folder"
             title="Delete"
           >
-            <Trash2 size={15} />
+            <HugeIcon icon={IconDelete} size={18} />
             <span>Delete</span>
           </button>
         </div>

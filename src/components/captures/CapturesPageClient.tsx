@@ -1,17 +1,8 @@
 "use client";
 
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowLeft, IconArrowRight, IconArrowUpRight, IconCamera, IconClose, IconDelete, IconInfo, IconLink, IconShare } from "@/components/ui/icons";
 import { useCallback, useEffect, useState } from "react";
-import {
-  ArrowUpRight,
-  Camera,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Link as LinkIcon,
-  Share2,
-  Trash2,
-  X,
-} from "lucide-react";
 import Link from "next/link";
 
 export type CaptureView = {
@@ -134,7 +125,7 @@ function Lightbox({
               title="Visit source"
               aria-label="Visit source"
             >
-              <LinkIcon size={17} />
+              <HugeIcon icon={IconLink} size={18} />
             </a>
           )}
           {capture.capture_url && (
@@ -146,11 +137,11 @@ function Lightbox({
               title="Open full image"
               aria-label="Open full image"
             >
-              <ArrowUpRight size={17} />
+              <HugeIcon icon={IconArrowUpRight} size={18} />
             </a>
           )}
           <button type="button" className="lb-action-btn" title="Copy image link" aria-label="Copy image link" onClick={handleShare}>
-            <Share2 size={17} />
+            <HugeIcon icon={IconShare} size={18} />
           </button>
           <button
             type="button"
@@ -160,7 +151,7 @@ function Lightbox({
             aria-pressed={showInfo}
             onClick={() => setShowInfo((value) => !value)}
           >
-            <Info size={17} />
+            <HugeIcon icon={IconInfo} size={18} />
           </button>
           <button
             type="button"
@@ -170,11 +161,11 @@ function Lightbox({
             disabled={isDeleting}
             onClick={handleDelete}
           >
-            <Trash2 size={17} />
+            <HugeIcon icon={IconDelete} size={18} />
           </button>
           <div className="lb-topbar-divider" />
           <button type="button" className="lb-action-btn" title="Close" aria-label="Close" onClick={onClose}>
-            <X size={17} />
+            <HugeIcon icon={IconClose} size={18} />
           </button>
         </div>
       </div>
@@ -182,7 +173,7 @@ function Lightbox({
       <div className="lb-stage">
         {index > 0 && (
           <button type="button" className="lb-nav lb-nav--prev" onClick={() => onNavigate(index - 1)} aria-label="Previous capture">
-            <ChevronLeft size={20} />
+            <HugeIcon icon={IconArrowLeft} size={18} />
           </button>
         )}
 
@@ -191,7 +182,7 @@ function Lightbox({
             <img key={capture.id} src={capture.capture_url} alt={capture.page_title ?? "Capture"} className="lb-img" />
           ) : (
             <div className="lb-no-image">
-              <Camera size={32} />
+              <HugeIcon icon={IconCamera} size={18} />
               <span>No image available</span>
             </div>
           )}
@@ -199,7 +190,7 @@ function Lightbox({
 
         {index < captures.length - 1 && (
           <button type="button" className="lb-nav lb-nav--next" onClick={() => onNavigate(index + 1)} aria-label="Next capture">
-            <ChevronRight size={20} />
+            <HugeIcon icon={IconArrowRight} size={18} />
           </button>
         )}
       </div>
@@ -288,11 +279,11 @@ function MasonryGrid({
             />
           ) : (
             <div className="masonry-placeholder">
-              <Camera size={20} />
+              <HugeIcon icon={IconCamera} size={18} />
             </div>
           )}
           <div className="masonry-hover" aria-hidden="true">
-            <ArrowUpRight size={14} />
+            <HugeIcon icon={IconArrowUpRight} size={18} />
           </div>
         </div>
       ))}
@@ -326,7 +317,7 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
       <main className="captures-page">
         <div className="captures-empty">
           <div className="captures-empty__icon" aria-hidden="true">
-            <Camera size={24} />
+            <HugeIcon icon={IconCamera} size={18} />
           </div>
           <h2>No captures yet</h2>
           <p>Use the Nyabag browser extension to capture screenshots. They&apos;ll appear here.</p>

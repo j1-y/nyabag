@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { ActionResult, UserOnboarding } from "@/lib/types";
+import type { ActionResult, Bookmark, UserOnboarding } from "@/lib/types";
 import {
   onboardingFocusAreaSchema,
   onboardingPrimaryGoalSchema,
@@ -11,6 +11,22 @@ import {
 } from "@/lib/validations";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+export type OnboardingBookmarkPreview = {
+  id: string;
+  url: string;
+  title: string;
+  screenshot_url: string | null;
+  processing_status: Bookmark["processing_status"];
+  processing_error: string | null;
+  metadata_refreshed_at: string | null;
+  screenshot_refreshed_at: string | null;
+  semantic_status: Bookmark["semantic_status"];
+  updated_at: string;
+};
+
+const ONBOARDING_BOOKMARK_PREVIEW_SELECT =
+  "id,url,title,screenshot_url,processing_status,processing_error,metadata_refreshed_at,screenshot_refreshed_at,semantic_status,updated_at";
 
 async function getAuthenticatedUser(supabase: Supabase): Promise<User | null> {
   const {
@@ -35,6 +51,43 @@ async function getExistingOnboarding(
 
 function onboardingError(message: string): ActionResult<UserOnboarding> {
   return { success: false, error: message };
+}
+
+function onboardingPreviewError(
+  message: string
+): ActionResult<OnboardingBookmarkPreview> {
+  return { success: false, error: message };
+}
+
+export async function getOnboardingBookmarkPreview(
+  bookmarkId: string
+): Promise<ActionResult<OnboardingBookmarkPreview>> {
+  const supabase = await createClient();
+  const user = await getAuthenticatedUser(supabase);
+
+  if (!user) {
+    return onboardingPreviewError("Not authenticated");
+  }
+
+  const { data, error } = await supabase
+    .from("bookmarks")
+    .select(ONBOARDING_BOOKMARK_PREVIEW_SELECT)
+    .eq("id", bookmarkId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    return onboardingPreviewError(error.message);
+  }
+
+  if (!data) {
+    return onboardingPreviewError("Bookmark not found");
+  }
+
+  return {
+    success: true,
+    data: data as OnboardingBookmarkPreview,
+  };
 }
 
 export async function saveOnboardingPreferences(

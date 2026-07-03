@@ -1,6 +1,7 @@
 "use client";
 
-import { Clock, FileText, Plus, Grid } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconAdd, IconClock, IconFile, IconGrid } from "@/components/ui/icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useBookmarks } from "@/hooks/useBookmarks";
@@ -30,18 +31,18 @@ export function Sidebar() {
           className={`nav-item ${activeFilter === "all" && activeTag === "All" ? "active" : ""}`}
           onClick={() => { setActiveFilter("all"); setActiveTag("All"); }}
         >
-          <Grid size={13} />
+          <HugeIcon icon={IconGrid} size={18} />
           All bookmarks
         </button>
         <button
           className={`nav-item ${activeFilter === "recent" ? "active" : ""}`}
           onClick={() => setActiveFilter("recent")}
         >
-          <Clock size={13} />
+          <HugeIcon icon={IconClock} size={18} />
           Recent
         </button>
         <Link href="/canvas" className="nav-item">
-          <FileText size={13} />
+          <HugeIcon icon={IconFile} size={18} />
           Notes
         </Link>
       </nav>
@@ -68,7 +69,7 @@ export function Sidebar() {
 
       <div className="sidebar-footer">
         <button className="add-btn-sidebar" onClick={openAdd}>
-          <Plus size={14} /> New bookmark
+          <HugeIcon icon={IconAdd} size={18} /> New bookmark
         </button>
       </div>
     </aside>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Palette } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconPalette } from "@/components/ui/icons";
 import { useState, useRef, useEffect } from "react";
 ;
 import { NOTE_COLORS } from "@/hooks/useNotes";
@@ -34,7 +35,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         title="Change color"
         onPointerDown={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
       >
-        <Palette size={12} />
+        <HugeIcon icon={IconPalette} size={18} />
       </IconButton>
       {open && (
         <div className="color-picker-popover" onPointerDown={(e) => e.stopPropagation()}>

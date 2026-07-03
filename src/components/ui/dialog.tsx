@@ -1,6 +1,7 @@
 "use client";
 
-import { X } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconClose } from "@/components/ui/icons";
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
@@ -42,7 +43,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[10px] text-muted-foreground outline-none transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:pointer-events-none">
-        <X className="h-4 w-4" />
+        <HugeIcon icon={IconClose} />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconLoader } from "@/components/ui/icons";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -106,9 +107,8 @@ export default function SignupPage() {
             disabled={loading}
           >
             {loading && (
-              <Loader2
-                size={15}
-                className="spin-icon"
+              <HugeIcon icon={IconLoader}
+                size={18} className="spin-icon"
                 style={{ animation: "spin 1s linear infinite" }}
               />
             )}

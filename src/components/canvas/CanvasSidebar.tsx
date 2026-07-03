@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, Grid } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconFile, IconGrid } from "@/components/ui/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 ;
@@ -20,14 +21,14 @@ export function CanvasSidebar() {
           href="/"
           className={`nav-item ${pathname === "/" ? "active" : ""}`}
         >
-          <Grid size={13} />
+          <HugeIcon icon={IconGrid} size={18} />
           All bookmarks
         </Link>
         <Link
           href="/canvas"
           className={`nav-item ${pathname === "/canvas" ? "active" : ""}`}
         >
-          <FileText size={13} />
+          <HugeIcon icon={IconFile} size={18} />
           Canvas
         </Link>
       </nav>

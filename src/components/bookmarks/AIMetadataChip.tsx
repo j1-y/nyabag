@@ -15,7 +15,7 @@ export function AIMetadataChip({
 
   return (
     <span className={`ai-chip ${className}`}>
-      {showIcon && <AIIcon size={13} />}
+      {showIcon && <AIIcon size={18} />}
       {label}
     </span>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete, IconPencil } from "@/components/ui/icons";
 import { useMemo, useRef, useState } from "react";
 ;
 import { useNotes } from "@/hooks/useNotes";
@@ -214,10 +215,10 @@ export function CanvasSection({ section, viewport }: Props) {
         )}
         <div className="canvas-section-actions" onPointerDown={(e) => e.stopPropagation()}>
           <IconButton variant="ghost" size="icon-sm" title="Rename section" onClick={() => setIsEditing(true)}>
-            <Pencil size={12} />
+            <HugeIcon icon={IconPencil} size={18} />
           </IconButton>
           <IconButton variant="ghost" size="icon-sm" title="Delete section" onClick={() => deleteSection(section.id)}>
-            <Trash2 size={12} />
+            <HugeIcon icon={IconDelete} size={18} />
           </IconButton>
         </div>
       </div>

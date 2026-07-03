@@ -19,6 +19,9 @@
 
 - Preserve the current visual identity unless the task is explicitly a redesign.
 - Favor shared UI primitives under `src/components/ui`.
+- Render product UI icons through `HugeIcon` and semantic aliases from `src/components/ui/icons.ts`; Nyabag uses Hugeicons Stroke Rounded only.
+- Render app icons at `18px` by default; the `HugeIcon` wrapper clamps smaller numeric sizes up to 18px.
+- Keep the dashboard shell curve viewport-fixed at the sidebar/main-panel boundary; do not rely only on a scrolling content element for that visible curve.
 - Keep desktop-first spacing and layout rules intact.
 - Treat mobile as a constrained capture surface unless the task says otherwise.
 

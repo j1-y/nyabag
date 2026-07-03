@@ -539,7 +539,7 @@ async function extractDomDesignData(page, url) {
   };
 }
 
-async function preparePageForScreenshot(page, timeoutMs) {
+async function preparePageForScreenshot(page, timeoutMs, fullPage) {
   console.log("[processor] preparing dynamic page");
 
   await page
@@ -547,7 +547,9 @@ async function preparePageForScreenshot(page, timeoutMs) {
     .catch(() => undefined);
 
   await page
-    .waitForLoadState("networkidle", { timeout: Math.min(timeoutMs, 8000) })
+    .waitForLoadState("networkidle", {
+      timeout: Math.min(timeoutMs, fullPage ? 8000 : 4000),
+    })
     .catch(() => undefined);
 
   await page
@@ -563,6 +565,19 @@ async function preparePageForScreenshot(page, timeoutMs) {
       `,
     })
     .catch(() => undefined);
+
+  if (!fullPage) {
+    await page
+      .evaluate(async () => {
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+        window.scrollTo(0, 0);
+        await sleep(700);
+      })
+      .catch(() => undefined);
+
+    console.log("[processor] viewport page prepared");
+    return;
+  }
 
   await page.evaluate(async () => {
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -626,7 +641,7 @@ async function capturePreview(browser, url, timeoutMs, width, height, fullPage, 
       timeout: timeoutMs,
     });
 
-    await preparePageForScreenshot(page, timeoutMs);
+    await preparePageForScreenshot(page, timeoutMs, fullPage);
     const observed = await extractDomDesignData(page, safeUrl);
     const deterministicVisualFacts = await extractVisualFacts(page, safeUrl);
 
@@ -1018,12 +1033,12 @@ async function main() {
 
   const config = {
     maxJobs: envNumber("MAX_JOBS_PER_RUN", 5),
-    timeoutMs: envNumber("SCREENSHOT_TIMEOUT_MS", 30_000),
+    timeoutMs: envNumber("SCREENSHOT_TIMEOUT_MS", 15_000),
     width: envNumber("SCREENSHOT_WIDTH", 1440),
-    height: envNumber("SCREENSHOT_HEIGHT", 1100),
-    fullPage: envBoolean("SCREENSHOT_FULL_PAGE", true),
-    quality: envNumber("WEBP_QUALITY", 70),
-    maxWebpHeight: envNumber("MAX_WEBP_HEIGHT", 15000),
+    height: envNumber("SCREENSHOT_HEIGHT", 900),
+    fullPage: envBoolean("SCREENSHOT_FULL_PAGE", false),
+    quality: envNumber("WEBP_QUALITY", 76),
+    maxWebpHeight: envNumber("MAX_WEBP_HEIGHT", 900),
   };
   const geminiConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
   const geminiModel = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash";

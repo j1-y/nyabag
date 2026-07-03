@@ -47,8 +47,8 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Ranked hybrid search using weighted PostgreSQL lexical retrieval, Gemini bookmark embeddings, optional visual-memory evidence, TypeScript fusion, and deterministic timezone-aware temporal filters such as `saved today` or `from last month`.
 - Tag filtering and recent filtering.
 - Visual detail page for each bookmark.
-- Full-page website screenshots through Microlink.
-- Palette extraction from Microlink screenshot data where available.
+- Short top-viewport website screenshots through the Playwright bookmark processor.
+- Palette extraction from stored screenshot data where available.
 - Fallback palette/font generation based on domain.
 - Metadata scraping for title, summary, and inferred tags.
 - In-app delete confirmation flow in bookmark UI.
@@ -128,9 +128,10 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 ### Onboarding
 
 - Route at `/onboarding`.
-- Authenticated first-run flow centered on saving one real bookmark.
+- Authenticated first-run flow centered on saving one real bookmark through a three-step idle, creating, and success experience.
 - Uses the same `createBookmark(formData)` action as the dashboard and mobile capture surfaces.
-- Shows a compact saved-memory preview while screenshot and metadata processing continue asynchronously.
+- Preserves a single persistent stage card that morphs between internal idle, loading, and saved-preview layers.
+- Polls `getOnboardingBookmarkPreview(bookmarkId)` after creation and keeps the creating state active until `screenshot_url` exists; processor failures show retry/skip actions instead of a fake success state.
 - Users can explicitly skip first bookmark creation, which calls `completeOnboarding()` and enters the dashboard.
 - Does not require workspace type, primary goal, focus area, or Telegram connection.
 
@@ -153,10 +154,10 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 | Database | Supabase Postgres |
 | Storage | Supabase Storage |
 | Validation | Zod 4 |
-| Icons | Lucide React |
+| Icons | Hugeicons Stroke Rounded via `@hugeicons/react` and `@hugeicons/core-free-icons` |
 | UI primitives | Radix Dialog primitives for some dialogs |
 | Styling | Global CSS in `src/app/globals.css`, Tailwind tooling present |
-| Metadata/screenshot | Microlink API plus custom metadata scraper |
+| Metadata/screenshot | Playwright bookmark processor plus custom metadata scraper |
 | Deployment target | Vercel |
 
 Important scripts:
@@ -221,7 +222,7 @@ supabase/
 
 - `/login`: email/password login UI.
 - `/signup`: account creation UI.
-- `/onboarding`: authenticated first-run flow that saves one real bookmark or lets the user explicitly skip into the dashboard.
+- `/onboarding`: authenticated first-run flow that animates idle, creating, and success states while saving one real bookmark or lets the user explicitly skip into the dashboard.
 - `/privacy`: public privacy policy.
 - `/terms`: public terms of service.
 
@@ -234,7 +235,7 @@ supabase/
 - `/folders/[folderId]`: folder-specific bookmark view.
 - `/profile`: profile settings.
 
-The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`. Desktop app navigation lives in `DashboardSidebar`; the top Bookmarks/Canvas feature switch was removed so pages render directly inside a curved white main panel.
+The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`. Desktop app navigation lives in `DashboardSidebar`; the top Bookmarks/Canvas feature switch was removed so pages render directly inside a curved white main panel. The sidebar boundary uses viewport-fixed shell corner masks so the top and bottom curve remains visible while long dashboard pages scroll.
 
 Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do not add duplicate `/app` routes.
 
@@ -265,7 +266,7 @@ Important fields:
 | `tags` | User and inferred tags |
 | `palette` | Extracted or fallback colors |
 | `fonts` | Detected or fallback fonts |
-| `screenshot_url` | Microlink screenshot URL |
+| `screenshot_url` | Stored bookmark screenshot URL |
 | `screenshot_refreshed_at` | Screenshot timestamp |
 | `summary` | Metadata description summary |
 | `metadata_refreshed_at` | Metadata scrape timestamp |
@@ -397,7 +398,7 @@ Performance lifecycle:
 - `createBookmark(formData)` inserts a basic bookmark row immediately and returns it with `processing_status = "queued"`.
 - A `bookmark_processing_jobs` row is created for the same bookmark.
 - The app best-effort triggers the GitHub Actions processor through `workflow_dispatch`; a 5-minute cron fallback also runs the processor.
-- The standalone `processor/` worker uses Playwright for screenshots, Sharp for WebP compression, and Supabase Storage for uploads.
+- The standalone `processor/` worker uses Playwright for short top-viewport screenshots, Sharp for WebP compression, and Supabase Storage for uploads.
 - Completed enrichment marks the row `ready`; failures mark it `failed` with `processing_error` while keeping the bookmark usable.
 - The dashboard uses bounded polling for queued/processing bookmarks instead of storing private bookmark data in LocalStorage.
 
@@ -470,16 +471,14 @@ Module: `src/lib/metadata.ts`.
 
 Module: `src/lib/data.ts`.
 
-`getMicrolinkPreviewData(url)`:
+Current bookmark previews are generated by `processor/process-bookmarks.mjs`:
 
-- Calls `https://api.microlink.io/`.
-- Requests:
-  - `screenshot=true`
-  - `fullPage=true`
-  - `palette=true`
-  - `filter=screenshot`
-- Returns screenshot URL, palette, and refreshed timestamp.
-- Returns null on errors.
+- Uses Playwright Chromium with a default `1440x900` viewport.
+- Captures from the top of the page with `SCREENSHOT_FULL_PAGE=false`.
+- Compresses to WebP with Sharp and caps output height at `MAX_WEBP_HEIGHT=900`.
+- Uploads the result to the public `bookmark-screenshots` storage bucket and stores the URL in `bookmarks.screenshot_url`.
+
+`getMicrolinkPreviewData(url)` remains a legacy helper in `src/lib/data.ts` for Microlink screenshot/palette fetches, but the queued bookmark processor is the current screenshot path for newly saved bookmarks.
 
 `SCREENSHOT_REFRESH_INTERVAL_MS`:
 
@@ -717,11 +716,18 @@ Modules:
 
 | Function | Purpose | Side effects |
 | --- | --- | --- |
-| `createBookmark(formData)` | Create bookmark with metadata/screenshot enrichment | Inserts `bookmarks`, calls Microlink and scraper, revalidates `/` |
+| `createBookmark(formData)` | Create bookmark and enqueue metadata/screenshot enrichment | Inserts `bookmarks`, enqueues processor work, revalidates `/` |
 | `updateBookmark(formData)` | Update bookmark and refresh metadata if URL changes | Updates `bookmarks`, revalidates `/` |
 | `deleteBookmark(id)` | Delete owner-scoped bookmark | Deletes `bookmarks`, revalidates `/` |
 | `updateProfile(formData)` | Upsert profile and optional avatar | Uploads/removes avatar, upserts `profiles`, revalidates routes |
 | `signOut()` | End Supabase session | Calls Supabase sign out, revalidates `/` |
+
+### `src/lib/onboarding-actions.ts`
+
+| Function | Purpose | Side effects |
+| --- | --- | --- |
+| `completeOnboarding()` | Mark first-run onboarding complete | Upserts `user_onboarding`, revalidates onboarding/dashboard/profile routes |
+| `getOnboardingBookmarkPreview(bookmarkId)` | Fetch the authenticated user's newly created bookmark preview fields for onboarding polling | Read-only owner-scoped bookmark lookup |
 
 ### `src/lib/canvas-actions.ts`
 
@@ -800,7 +806,7 @@ Nyabag uses a mix of optimistic UI and server-confirmed updates.
 
 ### Bookmarks
 
-- Bookmark creation uses pending UI while the server action performs metadata/screenshot work.
+- Bookmark creation uses pending UI while asynchronous processor work produces metadata and the stored screenshot.
 - Delete is optimistic in `useBookmarks`.
 - On delete failure, previous bookmark state is restored.
 
@@ -832,16 +838,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 Confirm exact names in `src/lib/supabase/server.ts` and `src/lib/supabase/client.ts` before deployment.
 
-### Microlink
+### Bookmark Processor
 
-Used for:
+Used for current bookmark previews:
 
-- Full-page screenshots.
+- Short top-viewport Playwright screenshots.
 - Screenshot-derived color palettes.
 
 Important operational note:
 
-- Free-tier Microlink limits can be exhausted quickly.
+- The GitHub Actions workflow runs on dispatch and every 5 minutes as a fallback.
 - Nyabag stores screenshot URLs and refreshed timestamps so screenshots do not need to be regenerated on every login.
 
 ### Provider Embeds
@@ -913,9 +919,9 @@ Current lint warnings:
    - Impact: lint warnings only.
    - Reasonable for external, dynamic, or signed media, but should be reviewed case-by-case.
 
-3. **Microlink dependency**
-   - Screenshot and palette extraction depend on Microlink availability and free-tier quota.
-   - Nyabag stores screenshot URLs/refreshed timestamps, but new bookmarks and changed URLs still call Microlink.
+3. **Bookmark processor dependency**
+   - Screenshot and palette extraction depend on the GitHub Actions processor, Playwright, Supabase Storage, and external site availability.
+   - Nyabag stores screenshot URLs/refreshed timestamps, but new bookmarks and changed URLs still need a successful processor run.
 
 4. **Social embeds are provider-dependent**
    - Private, deleted, region-restricted, or unsupported posts may fail.
@@ -984,6 +990,8 @@ Current lint warnings:
 ### First-memory onboarding
 
 - Onboarding now asks users to save one real bookmark before entering the dashboard.
+- The current onboarding UI is a prototype-faithful three-step animation with a persistent morphing stage card and real bookmark-preview polling.
+- The success step is gated by a real `screenshot_url`; failed processing stays in the creating step with retry and skip actions.
 - The old mandatory workspace preference, focus area, and Telegram setup gates were removed from first-run onboarding.
 - Telegram capture remains available from profile and through the existing Telegram API/webhook implementation.
 - Users can still skip bookmark creation explicitly; skipped onboarding keeps empty preference fields valid in `user_onboarding`.

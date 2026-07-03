@@ -1,16 +1,15 @@
 "use client";
 
-import { Upload, Link as LinkIcon } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconUpload } from "@/components/ui/icons";
 import { useMemo, useRef, useState, useTransition } from "react";
-;
 import { importBookmarks } from "@/lib/actions";
-import { extractUrlsFromText, MAX_IMPORT_URLS } from "@/lib/url-extraction";
+import { extractUrlsFromText } from "@/lib/url-extraction";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -177,7 +176,7 @@ export function ImportReferencesModal() {
                   accept=".txt,.md,.csv,text/plain,text/markdown,text/csv"
                   onChange={(event) => void addFile(event.target.files?.[0])}
                 />
-                <Upload size={24}  />
+                <HugeIcon icon={IconUpload} size={18} />
                 <strong>{isDragging ? "Drop it into Nyabag" : "Drop a .txt, .md, or .csv file here"}</strong>
                 <button type="button" onClick={() => fileInputRef.current?.click()}>
                   or choose a file

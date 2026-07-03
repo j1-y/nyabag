@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, Folder, Image, Pencil, Loader2, Sparkles, Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowUpRight, IconDelete, IconFolder, IconImage, IconLoader, IconPencil, IconSparkles } from "@/components/ui/icons";
 import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { retryBookmarkProcessing } from "@/lib/actions";
@@ -160,7 +161,7 @@ function BookmarkCardComponent({
                       <div className="preview-loading-line preview-loading-line-mid" />
                     </div>
                     <div className="skeleton-preview-status">
-                      <Loader2 />
+                      <HugeIcon icon={IconLoader} />
                       <span>Loading preview...</span>
                     </div>
                   </div>
@@ -179,7 +180,7 @@ function BookmarkCardComponent({
                 />
                 {imageError && (
                   <div className="preview-fallback">
-                    <Image />
+                    <HugeIcon icon={IconImage} />
                     <span>{domain}</span>
                     <button
                       type="button"
@@ -193,12 +194,12 @@ function BookmarkCardComponent({
               </>
             ) : isPendingPreview ? (
               <div className="preview-fallback">
-                <Image />
+                <HugeIcon icon={IconImage} />
                 <span>{pendingLabel}</span>
               </div>
             ) : isFailed ? (
               <div className="preview-fallback">
-                <Image />
+                <HugeIcon icon={IconImage} />
                 <span>Preview failed</span>
                 <button
                   type="button"
@@ -212,7 +213,7 @@ function BookmarkCardComponent({
               </div>
             ) : (
               <div className="preview-fallback">
-                <Image />
+                <HugeIcon icon={IconImage} />
                 <span>{domain}</span>
               </div>
             )}
@@ -228,7 +229,7 @@ function BookmarkCardComponent({
 
           {(isMemoryMatch || isMemoryPreparing || bookmark.match_label) && (
             <div className={`bookmark-memory-chip ${memoryChipClass}`} title={evidenceTitle}>
-              {isMemoryPreparing && !bookmark.match_label ? <Loader2 size={12} /> : <Sparkles size={12} />}
+              {isMemoryPreparing && !bookmark.match_label ? <HugeIcon icon={IconLoader} size={18} /> : <HugeIcon icon={IconSparkles} size={18} />}
               <span>{memoryLabel}</span>
             </div>
           )}
@@ -268,7 +269,7 @@ function BookmarkCardComponent({
                 aria-label={`Open ${bookmark.title}`}
                 onClick={(e) => { e.stopPropagation(); window.open(bookmark.url, "_blank", "noopener,noreferrer"); }}
               >
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <HugeIcon icon={IconArrowUpRight} />
               </Button>
               <Button
                 variant="ghost" size="icon" className="moodboard-action"
@@ -276,7 +277,7 @@ function BookmarkCardComponent({
                 aria-label={`Edit ${bookmark.title}`}
                 onClick={(e) => { e.stopPropagation(); onEdit(bookmark); }}
               >
-                <Pencil className="h-3.5 w-3.5" />
+                <HugeIcon icon={IconPencil} />
               </Button>
               {/* Move to folder */}
               <div className="moodboard-move-folder-wrap" onClick={(e) => e.stopPropagation()}>
@@ -289,7 +290,7 @@ function BookmarkCardComponent({
                     title="Move to folder"
                     aria-label={`Move ${bookmark.title} to folder`}
                   >
-                    <Folder className="h-3.5 w-3.5" />
+                    <HugeIcon icon={IconFolder} />
                   </Button>
                 </MoveToFolderMenu>
               </div>
@@ -299,7 +300,7 @@ function BookmarkCardComponent({
                 aria-label={`Delete ${bookmark.title}`}
                 onClick={handleDelete}
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <HugeIcon icon={IconDelete} />
               </Button>
             </div>
           </div>

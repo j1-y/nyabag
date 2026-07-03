@@ -1,4 +1,5 @@
-import { Bookmark, FileText, Loader2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconBookmark, IconFile, IconLoader } from "@/components/ui/icons";
 ;
 
 type DashboardRouteSkeletonProps = {
@@ -8,7 +9,7 @@ type DashboardRouteSkeletonProps = {
 function SkeletonPreviewStatus({ label }: { label: string }) {
   return (
     <div className="skeleton-preview-status">
-      <Loader2 size={14} />
+      <HugeIcon icon={IconLoader} size={18} />
       <span>{label}</span>
     </div>
   );
@@ -67,7 +68,7 @@ export function CanvasBoardSkeleton() {
   return (
     <div className="dashboard-route-skeleton canvas-board-skeleton" role="status" aria-live="polite">
       <div className="canvas-loading-pill canvas-loading-pill-floating">
-        <Loader2 size={16} />
+        <HugeIcon icon={IconLoader} size={18} />
         <span>Loading canvas...</span>
       </div>
     </div>
@@ -81,5 +82,5 @@ export function DashboardRouteSkeleton({ variant }: DashboardRouteSkeletonProps)
 }
 
 export function DashboardRouteSkeletonIcon({ variant }: DashboardRouteSkeletonProps) {
-  return variant === "canvas" ? <FileText size={14} /> : <Bookmark size={14} />;
+  return variant === "canvas" ? <HugeIcon icon={IconFile} size={18} /> : <HugeIcon icon={IconBookmark} size={18} />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Camera, Save } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconCamera, IconSave } from "@/components/ui/icons";
 import { useEffect, useMemo, useState, useTransition } from "react";
 ;
 import { updateProfile } from "@/lib/actions";
@@ -85,7 +86,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <p>JPG, PNG, WEBP, or GIF. Up to 5MB.</p>
           <Button variant="outline" asChild className="profile-upload-button">
             <label>
-            <Camera size={14} />
+            <HugeIcon icon={IconCamera} size={18} />
             Choose image
             <input name="avatar" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={onAvatarChange} />
             </label>
@@ -121,7 +122,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
         <div className="profile-actions">
           <Button type="submit" disabled={isPending}>
-            <Save size={14} />
+            <HugeIcon icon={IconSave} size={18} />
             {isPending ? "Saving..." : "Save profile"}
           </Button>
         </div>

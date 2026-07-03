@@ -1,6 +1,7 @@
 "use client";
 
-import { Inbox, FolderPlus } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconFolderAdd, IconInbox } from "@/components/ui/icons";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,7 +37,7 @@ export function FolderTree({ folders, collapsed }: FolderTreeProps) {
           aria-label="Create design folder"
           title="New folder"
         >
-          <FolderPlus size={16} />
+          <HugeIcon icon={IconFolderAdd} size={18} />
         </button>
       </div>
 
@@ -47,7 +48,7 @@ export function FolderTree({ folders, collapsed }: FolderTreeProps) {
           className={`folder-tree-static-item folder-tree-root-item ${uncatActive ? "active" : ""}`}
           title="Inbox bookmarks"
         >
-          <Inbox size={16} aria-hidden="true" className="folder-tree-root-icon" />
+          <HugeIcon icon={IconInbox} size={18} aria-hidden="true" className="folder-tree-root-icon" />
           <span className="folder-tree-root-label">Inbox</span>
         </Link>
 

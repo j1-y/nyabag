@@ -1,6 +1,4 @@
-import { Copy } from "lucide-react";
 import Link from "next/link";
-;
 import type { BookmarkFolder } from "@/lib/types";
 
 type FolderBreadcrumbsProps = {

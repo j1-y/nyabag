@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowLeft, ArrowUpRight, Palette, Loader2, RotateCw, Sparkles, Tag, Type, Trash2, MessageCircle } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowLeft, IconArrowUpRight, IconDelete, IconLoader, IconMessage, IconPalette, IconRefresh, IconSparkles, IconTag, IconText } from "@/components/ui/icons";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 ;
@@ -107,7 +108,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
       <main className="bookmark-detail-shell">
         <section className="bookmark-detail-info">
           <button className="detail-back" onClick={() => router.push("/")}>
-            <ArrowLeft size={15} />
+            <HugeIcon icon={IconArrowLeft} size={18} />
             Back to bookmarks
           </button>
 
@@ -137,18 +138,18 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
 
           {currentBookmark.note && (
             <div className="detail-note-card">
-              <MessageCircle size={16} />
+              <HugeIcon icon={IconMessage} size={18} />
               <p>{currentBookmark.note}</p>
             </div>
           )}
 
           <a className="detail-visit" href={currentBookmark.url} target="_blank" rel="noopener noreferrer">
             Visit website
-            <ArrowUpRight size={14} />
+            <HugeIcon icon={IconArrowUpRight} size={18} />
           </a>
 
           <div className="detail-section detail-memory-section">
-            <h2><Sparkles size={15} /> Design Memory</h2>
+            <h2><HugeIcon icon={IconSparkles} size={18} /> Design Memory</h2>
             {currentBookmark.ai_description || aiMetadata?.design_context ? (
               <p className="detail-memory-description">
                 {currentBookmark.ai_description || aiMetadata?.design_context}
@@ -171,7 +172,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
             </div>
             {(currentBookmark.semantic_status === "failed" || currentBookmark.semantic_status === "skipped") && (
               <Button className="detail-action-btn" variant="outline" onClick={handleRetryMemory} disabled={isMemoryRetrying}>
-                {isMemoryRetrying ? <Loader2 className="animate-spin" /> : <RotateCw />}
+                {isMemoryRetrying ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <HugeIcon icon={IconRefresh} />}
                 {isMemoryRetrying ? "Retrying..." : "Retry memory processing"}
               </Button>
             )}
@@ -183,19 +184,19 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
           </div>
 
           <div className="detail-section">
-            <h2><Palette size={15} /> Extracted colors</h2>
+            <h2><HugeIcon icon={IconPalette} size={18} /> Extracted colors</h2>
             <BookmarkColorPalette colors={currentBookmark.palette} />
           </div>
 
           <div className="detail-section">
-            <h2><Type size={15} /> Detected fonts</h2>
+            <h2><HugeIcon icon={IconText} size={18} /> Detected fonts</h2>
             <div className="detail-chip-list">
               {currentBookmark.fonts.map((font) => <span key={font}>{font}</span>)}
             </div>
           </div>
 
           <div className="detail-section">
-            <h2><Tag size={15} /> Tags</h2>
+            <h2><HugeIcon icon={IconTag} size={18} /> Tags</h2>
             <div className="detail-chip-list">
               {currentBookmark.tags.length
                 ? currentBookmark.tags.map((tag) => <span key={tag}>{tag}</span>)
@@ -205,15 +206,15 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
 
           <div className="detail-actions">
             <Button className="detail-action-btn detail-action-btn-danger" variant="destructive" onClick={() => setDeleteOpen(true)} disabled={isPending}>
-              <Trash2 /> Delete
+              <HugeIcon icon={IconDelete} /> Delete
             </Button>
             <Button className="detail-action-btn" variant="outline" onClick={handleRefreshScreenshot} disabled={isRefreshing}>
-              {isRefreshing ? <Loader2 className="animate-spin" /> : <RotateCw />}
+              {isRefreshing ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <HugeIcon icon={IconRefresh} />}
               {isRefreshing ? "Queueing..." : "Reprocess preview + AI"}
             </Button>
             {currentBookmark.processing_status === "failed" && (
               <Button className="detail-action-btn" variant="outline" onClick={handleRetryProcessing} disabled={isRetrying}>
-                {isRetrying ? <Loader2 className="animate-spin" /> : <RotateCw />}
+                {isRetrying ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <HugeIcon icon={IconRefresh} />}
                 {isRetrying ? "Retrying..." : "Retry preview"}
               </Button>
             )}
@@ -229,7 +230,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
               <span />
               <strong>{domain}</strong>
               <a href={currentBookmark.url} target="_blank" rel="noopener noreferrer" aria-label="Open site">
-                <ArrowUpRight size={14} />
+                <HugeIcon icon={IconArrowUpRight} size={18} />
               </a>
             </div>
             <div className="browser-shot">

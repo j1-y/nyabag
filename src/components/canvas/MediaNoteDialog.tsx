@@ -1,6 +1,7 @@
 "use client";
 
-import { Upload, Link as LinkIcon } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconLink, IconUpload } from "@/components/ui/icons";
 import { useRef, useState } from "react";
 ;
 import type { PendingMediaNote } from "@/lib/types";
@@ -161,11 +162,11 @@ export function MediaNoteDialog({
           }}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="upload" className="gap-2">
-                <Upload size={16}  />
+                <HugeIcon icon={IconUpload} size={18} />
                 Upload
               </TabsTrigger>
               <TabsTrigger value="url" className="gap-2">
-                <LinkIcon size={16}  />
+                <HugeIcon icon={IconLink} size={18} />
                 Link
               </TabsTrigger>
             </TabsList>
@@ -190,7 +191,7 @@ export function MediaNoteDialog({
                   accept={accept}
                   onChange={(e) => void selectFile(e.target.files?.[0])}
                 />
-                <Upload size={28}  />
+                <HugeIcon icon={IconUpload} size={18} />
                 <strong>{file ? file.name : `Drop a ${type} file here`}</strong>
                 <span>
                   {file

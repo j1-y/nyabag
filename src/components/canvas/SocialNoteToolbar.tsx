@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete } from "@/components/ui/icons";
 ;
 import { useNotes } from "@/hooks/useNotes";
 import { IconButton } from "@/components/ui/icon-button";
@@ -39,7 +40,7 @@ export function SocialNoteToolbar({ note, viewportScale, placement }: SocialNote
           void deleteNote(note.id);
         }}
       >
-        <Trash2 size={16} />
+        <HugeIcon icon={IconDelete} size={18} />
       </IconButton>
     </div>
   );

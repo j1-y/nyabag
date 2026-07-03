@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconCheck } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 ;
@@ -93,7 +94,7 @@ export function FolderRenameDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !name.trim() || name === folder.name}>
-              <Check />
+              <HugeIcon icon={IconCheck} />
               {isPending ? "Saving..." : "Rename"}
             </Button>
           </DialogFooter>

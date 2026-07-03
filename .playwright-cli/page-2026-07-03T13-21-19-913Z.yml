@@ -1,0 +1,22 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - img "Nyabag logo" [ref=e5]
+    - heading "Welcome back" [level=1] [ref=e6]
+    - paragraph [ref=e7]: Sign in to access your bookmarks
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: Email
+        - textbox "Email" [ref=e11]:
+          - /placeholder: you@example.com
+      - generic [ref=e12]:
+        - generic [ref=e13]: Password
+        - textbox "Password" [ref=e14]:
+          - /placeholder: ••••••••
+      - button "Sign in" [ref=e15] [cursor=pointer]
+    - paragraph [ref=e16]:
+      - text: No account?
+      - link "Create one" [ref=e17] [cursor=pointer]:
+        - /url: /signup
+  - button "Open Next.js Dev Tools" [ref=e23] [cursor=pointer]:
+    - img [ref=e24]
+  - alert [ref=e27]

@@ -1,12 +1,12 @@
 "use client";
 
-import { Type, Trash2, Link as LinkIcon } from "lucide-react";
+import { HugeIcon, type IconSvgElement } from "@/components/ui/huge-icon";
+import { IconDelete, IconLink, IconText } from "@/components/ui/icons";
 import type { CSSProperties, RefObject } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { IconButton } from "@/components/ui/icon-button";
 import type { CanvasNote } from "@/lib/types";
 import type { StickyNoteFormatAction, StickyNoteTextHandle } from "./NoteTextContent";
-import type { LucideIcon } from "lucide-react";
 
 interface TextFrameToolbarProps {
   note: CanvasNote;
@@ -19,13 +19,13 @@ const FRAME_ACTIONS: Array<{
   action: StickyNoteFormatAction;
   label: string;
   title: string;
-  icon?: LucideIcon;
+  icon?: IconSvgElement;
 }> = [
-  { action: "heading", label: "H", title: "Heading", icon: Type },
+  { action: "heading", label: "H", title: "Heading", icon: IconText },
   { action: "bold", label: "B", title: "Bold" },
   { action: "italic", label: "I", title: "Italic" },
   { action: "underline", label: "U", title: "Underline" },
-  { action: "link", label: "Link", title: "Link", icon: LinkIcon },
+  { action: "link", label: "Link", title: "Link", icon: IconLink },
 ];
 
 export function TextFrameToolbar({
@@ -60,7 +60,7 @@ export function TextFrameToolbar({
             formatRef.current?.applyFormat(action);
           }}
         >
-          {Icon ? <Icon size={16} /> : label}
+          {Icon ? <HugeIcon icon={Icon} size={18} /> : label}
         </button>
       ))}
 
@@ -79,7 +79,7 @@ export function TextFrameToolbar({
           void deleteNote(note.id);
         }}
       >
-        <Trash2 size={16} />
+        <HugeIcon icon={IconDelete} size={18} />
       </IconButton>
     </div>
   );

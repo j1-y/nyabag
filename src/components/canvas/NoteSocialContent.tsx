@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowUpRight } from "@/components/ui/icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 ;
 import { getXPostEmbedHtml } from "@/lib/canvas-actions";
@@ -110,7 +111,7 @@ function SocialFallback({ url, label, message }: { url: string; label: string; m
       </div>
       <a href={url} target="_blank" rel="noopener noreferrer" onPointerDown={(e) => e.stopPropagation()}>
         Open post
-        <ArrowUpRight size={13} />
+        <HugeIcon icon={IconArrowUpRight} size={18} />
       </a>
     </div>
   );

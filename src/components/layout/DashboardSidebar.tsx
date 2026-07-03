@@ -1,6 +1,7 @@
 "use client";
 
-import { Bookmark, Camera, ChevronLeft, ArrowRight, ChevronsUpDown, FileText, Palette, LogOut, User, LucideIcon } from "lucide-react";
+import { HugeIcon, type IconSvgElement } from "@/components/ui/huge-icon";
+import { IconArrowLeft, IconArrowRight, IconBookmark, IconCamera, IconFile, IconLogout, IconUser } from "@/components/ui/icons";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions";
@@ -16,8 +17,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -35,7 +34,7 @@ type DashboardSidebarProps = {
 type NavItem = {
   href?: string;
   label: string;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   match: (pathname: string) => boolean;
   comingSoon?: boolean;
 };
@@ -46,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/",
     label: "Bookmarks",
-    icon: Bookmark,
+    icon: IconBookmark,
     match: (p) =>
       p === "/" ||
       p.startsWith("/bookmarks") ||
@@ -55,19 +54,13 @@ const NAV_ITEMS: NavItem[] = [
   {
     href: "/canvas",
     label: "Canvas",
-    icon: FileText,
+    icon: IconFile,
     match: (p) => p.startsWith("/canvas"),
-  },
-  {
-    label: "Design DNA",
-    icon: Palette,
-    match: () => false,
-    comingSoon: true,
   },
   {
     href: "/captures",
     label: "Captures",
-    icon: Camera,
+    icon: IconCamera,
     match: (p) => p.startsWith("/captures"),
   },
 ];
@@ -121,9 +114,9 @@ export function DashboardSidebar({
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {collapsed ? (
-              <ArrowRight size={16} />
+              <HugeIcon icon={IconArrowRight} size={18} />
             ) : (
-              <ChevronLeft size={16} />
+              <HugeIcon icon={IconArrowLeft} size={18} />
             )}
           </button>
         </div>
@@ -160,7 +153,8 @@ export function DashboardSidebar({
 
               const itemContent = (
                 <>
-                  <ItemIcon
+                  <HugeIcon
+                    icon={ItemIcon}
                     size={18}
                     className="dashboard-sidebar-item-icon"
                     aria-hidden="true"
@@ -248,60 +242,36 @@ export function DashboardSidebar({
                   <strong>{displayName}</strong>
                   <small>{userEmail || "Personal"}</small>
                 </span>
-                <ChevronsUpDown
-                  size={15}
-                  className="sidebar-profile-settings"
-                  aria-hidden="true"
-                />
               </button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent
               side={collapsed ? "right" : "top"}
               align={collapsed ? "start" : "start"}
-              sideOffset={8}
+              sideOffset={6}
               className="sidebar-profile-menu-content"
             >
-              {/* Account summary */}
-              <DropdownMenuLabel className="sidebar-profile-menu-summary">
-                <span className="profile-avatar profile-avatar-lg" aria-hidden="true">
-                  {profileAvatarUrl ? (
-                    <span
-                      className="profile-avatar-image"
-                      style={{ backgroundImage: `url(${profileAvatarUrl})` }}
-                    />
-                  ) : (
-                    userInitials
-                  )}
-                </span>
-                <div className="sidebar-profile-menu-info">
-                  <strong>{displayName}</strong>
-                  <span>{userEmail}</span>
-                </div>
-              </DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="sidebar-profile-menu-link">
-                  <User size={15} aria-hidden="true" />
+                <Link
+                  href="/profile"
+                  className="sidebar-profile-menu-row sidebar-profile-menu-link"
+                >
+                  <HugeIcon icon={IconUser} size={18} aria-hidden="true" />
                   Profile
                 </Link>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem asChild>
-                <form action={signOut} className="sidebar-profile-menu-form">
+              <form action={signOut} className="sidebar-profile-menu-form">
+                <DropdownMenuItem asChild>
                   <button
                     type="submit"
-                    className="sidebar-profile-menu-danger"
+                    className="sidebar-profile-menu-row sidebar-profile-menu-danger"
                   >
-                    <LogOut size={15} aria-hidden="true" />
+                    <HugeIcon icon={IconLogout} size={18} aria-hidden="true" />
                     Log out
                   </button>
-                </form>
-              </DropdownMenuItem>
+                </DropdownMenuItem>
+              </form>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

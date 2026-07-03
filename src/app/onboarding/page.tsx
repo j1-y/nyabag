@@ -19,5 +19,5 @@ export default async function OnboardingPage() {
     redirect("/");
   }
 
-  return <OnboardingWizard userEmail={user.email ?? ""} />;
+  return <OnboardingWizard />;
 }

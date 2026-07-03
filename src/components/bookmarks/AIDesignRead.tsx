@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconLoader } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 ;
@@ -58,7 +59,7 @@ export function AIDesignRead({
     <section className="ai-design-read">
       <div className="ai-design-read__header">
         <span className="ai-design-read__icon">
-          <AIIcon size={16} />
+          <AIIcon size={18} />
         </span>
         <h2>AI Design Read</h2>
         <span className={`ai-design-read__status ai-design-read__status--${statusLabel}`}>
@@ -71,7 +72,7 @@ export function AIDesignRead({
           <p className="ai-state__title">Analyze with AI</p>
           <p className="ai-state__description">Let Nyabag read this reference for design memory.</p>
           <Button type="button" variant="outline" onClick={analyze}>
-            <AIIcon size={15} />
+            <AIIcon size={18} />
             Analyze with AI
           </Button>
         </div>
@@ -79,14 +80,14 @@ export function AIDesignRead({
         <div className="ai-state">
           <p className="ai-state__title">AI analysis pending</p>
           <p className="ai-state__description">Nyabag is reading this reference...</p>
-          <Loader2 className="animate-spin" size={16} />
+          <HugeIcon icon={IconLoader} className="animate-spin" size={18} />
         </div>
       ) : currentMetadata?.status === "failed" ? (
         <div className="ai-state">
           <p className="ai-state__title">AI analysis unavailable</p>
           <p className="ai-state__description">This reference could not be analyzed right now.</p>
           <Button type="button" variant="outline" onClick={analyze} disabled={isAnalyzing}>
-            {isAnalyzing ? <Loader2 className="animate-spin" /> : <AIIcon size={15} />}
+            {isAnalyzing ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <AIIcon size={18} />}
             {isAnalyzing ? "Analyzing..." : "Analyze again"}
           </Button>
         </div>

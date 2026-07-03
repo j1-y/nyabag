@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Check, Circle } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowRight, IconCheck, IconCircle } from "@/components/ui/icons";
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
@@ -29,7 +30,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     {...props}
   >
     {children}
-    <ArrowRight className="ml-auto h-4 w-4" />
+    <HugeIcon icon={IconArrowRight} className="ml-auto" />
   </DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
@@ -100,7 +101,7 @@ const DropdownMenuCheckboxItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Check className="h-4 w-4" />
+        <HugeIcon icon={IconCheck} />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -122,7 +123,7 @@ const DropdownMenuRadioItem = React.forwardRef<
   >
     <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <Circle className="h-2 w-2 fill-current" fill="currentColor" />
+        <HugeIcon icon={IconCircle} className="fill-current" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}

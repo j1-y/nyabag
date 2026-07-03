@@ -1,6 +1,7 @@
 "use client";
 
-import { Maximize2, Minus, Plus } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconAdd, IconMaximize, IconMinus } from "@/components/ui/icons";
 ;
 import { useNotes } from "@/hooks/useNotes";
 import { IconButton } from "@/components/ui/icon-button";
@@ -21,13 +22,13 @@ export function CanvasStatusBar() {
   return (
     <div className="canvas-zoom-controls">
       <IconButton type="button" variant="ghost" size="icon-sm" title="Zoom out" aria-label="Zoom out" onClick={() => zoom(-0.1)}>
-        <Minus size={18}  />
+        <HugeIcon icon={IconMinus} size={18} />
       </IconButton>
       <IconButton type="button" variant="ghost" size="icon-sm" title="Reset zoom" aria-label={`Reset zoom, current ${pct}%`} onClick={resetView}>
-        <Maximize2 size={17}  />
+        <HugeIcon icon={IconMaximize} size={18} />
       </IconButton>
       <IconButton type="button" variant="ghost" size="icon-sm" title="Zoom in" aria-label="Zoom in" onClick={() => zoom(0.1)}>
-        <Plus size={18}  />
+        <HugeIcon icon={IconAdd} size={18} />
       </IconButton>
     </div>
   );

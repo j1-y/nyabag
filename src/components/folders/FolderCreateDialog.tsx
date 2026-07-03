@@ -1,6 +1,7 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconSave } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 ;
@@ -153,7 +154,7 @@ export function FolderCreateDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isPending || !name.trim()}>
-              <Save />
+              <HugeIcon icon={IconSave} />
               {isPending ? "Creating..." : "Create folder"}
             </Button>
           </DialogFooter>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Folder, Loader2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconFolder, IconLoader } from "@/components/ui/icons";
 import * as React from "react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -79,7 +80,7 @@ export function MoveToFolderMenu({
         
         {isLoading ? (
           <div className="px-2 py-4 flex items-center justify-center text-muted-foreground text-sm gap-2">
-            <Loader2 className="animate-spin" size={16} /> Loading...
+            <HugeIcon icon={IconLoader} className="animate-spin" size={18} /> Loading...
           </div>
         ) : (
           <>
@@ -88,7 +89,7 @@ export function MoveToFolderMenu({
               disabled={isMoving || !currentFolderId}
               className="gap-2 cursor-pointer"
             >
-              <Folder size={14} aria-hidden="true" />
+              <HugeIcon icon={IconFolder} size={18} aria-hidden="true" />
               Inbox
               {!currentFolderId && <span className="ml-auto text-xs text-muted-foreground">(current)</span>}
             </DropdownMenuItem>
@@ -104,8 +105,8 @@ export function MoveToFolderMenu({
                   style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
                   className="gap-2 cursor-pointer"
                 >
-                  <Folder
-                    size={14}
+                  <HugeIcon icon={IconFolder}
+                    size={18}
                     aria-hidden="true"
                     style={folder.color ? { color: folder.color } : undefined}
                   />

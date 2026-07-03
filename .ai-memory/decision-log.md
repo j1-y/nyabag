@@ -47,3 +47,19 @@
 ## Decision: Dashboard navigation lives in the sidebar
 
 - Reason: The top Bookmarks/Canvas feature switch duplicated the sidebar and made the shell feel heavier. The authenticated app now uses the sidebar as the single navigation surface, with a curved white main panel as a layout-boundary exception to the normal 10px control radius.
+
+## Decision: Product icons use Hugeicons Stroke Rounded only
+
+- Reason: A single icon source keeps the UI visually consistent and prevents package drift. App icons should be imported as semantic aliases from `src/components/ui/icons.ts` and rendered through `HugeIcon`, which applies Nyabag defaults and clamps app icon sizes to at least 18px.
+
+## Decision: Dashboard shell corners are viewport-fixed
+
+- Reason: Dashboard pages can scroll independently of the viewport, so a curve applied only to the scrolling main panel disappears mid-scroll. The shell owns fixed top and bottom corner masks at the sidebar boundary while preserving normal page scroll behavior.
+
+## Decision: Onboarding success requires a real screenshot
+
+- Reason: The first-run success card should prove the core visual memory loop with an actual `screenshot_url`. If processing fails, onboarding stays in the creating step with retry/skip actions instead of showing placeholder success.
+
+## Decision: Bookmark screenshots are short viewport captures
+
+- Reason: Nyabag previews should load quickly and read as compact memories, so the processor captures the top viewport by default with `SCREENSHOT_FULL_PAGE=false`, `SCREENSHOT_HEIGHT=900`, and `MAX_WEBP_HEIGHT=900`.

@@ -21,12 +21,12 @@ jobs:
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
       GEMINI_EMBEDDING_MODEL: ${{ vars.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-2' }}
       MAX_JOBS_PER_RUN: 5
-      SCREENSHOT_TIMEOUT_MS: 20000
+      SCREENSHOT_TIMEOUT_MS: 15000
       SCREENSHOT_WIDTH: 1440
-      SCREENSHOT_HEIGHT: 1100
-      SCREENSHOT_FULL_PAGE: "true"
-      MAX_WEBP_HEIGHT: 15000
-      WEBP_QUALITY: 70
+      SCREENSHOT_HEIGHT: 900
+      SCREENSHOT_FULL_PAGE: "false"
+      MAX_WEBP_HEIGHT: 900
+      WEBP_QUALITY: 76
       WORKER_ID: github-actions-${{ github.run_id }}
 
     steps:

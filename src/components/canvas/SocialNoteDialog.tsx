@@ -1,6 +1,7 @@
 "use client";
 
-import { Share2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconShare } from "@/components/ui/icons";
 import { useState } from "react";
 ;
 import { parseSocialEmbed, socialProviderLabel } from "@/lib/social-embeds";
@@ -56,7 +57,7 @@ export function SocialNoteDialog({
       <DialogContent className="max-w-md">
         <DialogHeader className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4">
           <div className="grid h-10 w-10 place-items-center rounded-[10px] border border-border bg-surface-muted text-muted-foreground" aria-hidden="true">
-            <Share2 size={18} />
+            <HugeIcon icon={IconShare} size={18} />
           </div>
           <div className="grid gap-2">
             <DialogTitle>{title}</DialogTitle>

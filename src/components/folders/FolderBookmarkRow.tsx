@@ -1,31 +1,12 @@
 "use client";
 
-import { ArrowUpRight, ArrowDown, Folder, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowDown, IconArrowUpRight, IconDelete, IconPencil } from "@/components/ui/icons";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getDomain, getFaviconUrl } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { MoveToFolderMenu } from "@/components/folders/MoveToFolderMenu";
-import type { Bookmark, BookmarkFolder } from "@/lib/types";
-
-function getInitials(str: string) {
-  return str
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  "#7c6af7", "#f97316", "#10b981", "#3b82f6",
-  "#e11d48", "#8b5cf6", "#06b6d4", "#f59e0b",
-];
-function avatarColor(str: string) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
+import type { Bookmark } from "@/lib/types";
 
 type Props = {
   bookmark: Bookmark;
@@ -36,22 +17,14 @@ type Props = {
 
 export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props) {
   const router = useRouter();
-  const [faviconError, setFaviconError] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const moveRef = useRef<HTMLDivElement>(null);
 
-  const domain = getDomain(bookmark.url);
-  const favicon = getFaviconUrl(bookmark.url);
   const formattedDate = new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(new Date(bookmark.created_at));
-
-
-
-  const initials = getInitials(domain);
-  const bg = avatarColor(domain);
 
   return (
     <div
@@ -87,7 +60,7 @@ export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props
             }}
           >
             <Button variant="outline" size="sm" className="gap-2 text-xs h-8 px-2.5">
-              Move To <ArrowDown size={12} />
+              Move To <HugeIcon icon={IconArrowDown} size={18} />
             </Button>
           </MoveToFolderMenu>
         </div>
@@ -107,7 +80,7 @@ export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props
               window.open(bookmark.url, "_blank", "noopener,noreferrer")
             }
           >
-            <ArrowUpRight size={13} />
+            <HugeIcon icon={IconArrowUpRight} size={18} />
           </button>
           <button
             type="button"
@@ -116,7 +89,7 @@ export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props
             aria-label="Edit bookmark"
             onClick={() => onEdit(bookmark)}
           >
-            <Pencil size={13} />
+            <HugeIcon icon={IconPencil} size={18} />
           </button>
 
           <button
@@ -126,7 +99,7 @@ export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props
             aria-label="Delete bookmark"
             onClick={() => onDelete(bookmark)}
           >
-            <Trash2 size={13} />
+            <HugeIcon icon={IconDelete} size={18} />
           </button>
         </div>
       </div>

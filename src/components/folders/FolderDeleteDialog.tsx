@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 ;
@@ -79,7 +80,7 @@ export function FolderDeleteDialog({
             onClick={handleDelete}
             disabled={isPending}
           >
-            <Trash2 />
+            <HugeIcon icon={IconDelete} />
             {isPending ? "Deleting..." : "Delete folder"}
           </Button>
         </DialogFooter>

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, Link2, Send, Plug } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowUpRight, IconLinkAlt, IconPlug, IconSend } from "@/components/ui/icons";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 ;
 import { createTelegramConnectionCode, disconnectTelegram, getTelegramConnection } from "@/lib/actions";
@@ -197,7 +198,7 @@ export function TelegramCapturePanel({ initial }: TelegramCapturePanelProps) {
       ) : connection?.status === "connected" ? (
         <div className="telegram-capture-state">
           <div className="telegram-capture-detail">
-            <Plug size={18} />
+            <HugeIcon icon={IconPlug} size={18} />
             <div>
               <strong>Connected as {displayName(connection)}</strong>
               <span>{connection.connected_at ? `Connected ${formatDate(connection.connected_at)}` : "Ready to save links"}</span>
@@ -225,7 +226,7 @@ export function TelegramCapturePanel({ initial }: TelegramCapturePanelProps) {
       <div className="telegram-capture-actions">
         {state.configured && connection?.status !== "connected" && (
           <Button type="button" onClick={generateCode} disabled={isPending}>
-            <Send size={14} />
+            <HugeIcon icon={IconSend} size={18} />
             {connection?.status === "pending" || code ? "Regenerate code" : "Generate code"}
           </Button>
         )}
@@ -233,7 +234,7 @@ export function TelegramCapturePanel({ initial }: TelegramCapturePanelProps) {
         {state.botUrl && state.configured && (
           <Button type="button" variant="outline" asChild>
             <a href={state.botUrl} target="_blank" rel="noreferrer">
-              <ArrowUpRight size={14} />
+              <HugeIcon icon={IconArrowUpRight} size={18} />
               Open Telegram bot
             </a>
           </Button>
@@ -241,7 +242,7 @@ export function TelegramCapturePanel({ initial }: TelegramCapturePanelProps) {
 
         {connection?.status === "connected" && (
           <Button type="button" variant="outline" onClick={disconnect} disabled={isPending}>
-            <Link2 size={14} />
+            <HugeIcon icon={IconLinkAlt} size={18} />
             Disconnect Telegram
           </Button>
         )}

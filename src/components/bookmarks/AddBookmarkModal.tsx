@@ -1,6 +1,7 @@
 "use client";
 
-import { Save } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconSave } from "@/components/ui/icons";
 import { useRef, useState, useTransition } from "react";
 ;
 import { createBookmark } from "@/lib/actions";
@@ -130,7 +131,7 @@ export function AddBookmarkModal() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
             <Button type="submit" disabled={isPending}>
-              <Save /> {isPending ? "Saving..." : "Save"}
+              <HugeIcon icon={IconSave} /> {isPending ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </form>

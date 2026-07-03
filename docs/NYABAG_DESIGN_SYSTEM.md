@@ -51,15 +51,16 @@ Typography metrics, 1px borders, transforms, z-index, shadows, canvas coordinate
 - Use `border-radius: 10px` or `border-radius: var(--radius)` in CSS.
 - Use `0` only where an element is intentionally square or flush, such as link-style buttons with no visible container.
 - Do not use pill/circle radii for avatars, badges, drag bars, handles, toolbar buttons, or switches in the product app.
-- The dashboard shell may use `--dashboard-shell-curve` through `clip-path` only for the large boundary between the sidebar and main panel. Do not reuse that curve for controls, cards, or toolbars.
+- The dashboard shell may use `--dashboard-shell-curve` only for the large boundary between the sidebar and main panel. The visible top and bottom corner masks are viewport-fixed so the curve remains present while dashboard pages scroll. Do not reuse that curve for controls, cards, or toolbars.
 
 ## Sizing
 
 - Small control: `--control-sm: 32px`.
 - Medium control: `--control-md: 40px`.
 - Large control: `--control-lg: 48px`.
-- Small icon: `--icon-sm: 16px`.
-- Medium icon: `--icon-md: 24px`.
+- Small icon: `--icon-sm: 18px`.
+- Medium icon: `--icon-md: 18px`.
+- Product UI icons must use Hugeicons Stroke Rounded through `HugeIcon`; app icons render at `18px` by default.
 
 Toolbar buttons and dense actions should usually be `32px` or `40px`. Dialog actions and form controls should usually be `40px`.
 

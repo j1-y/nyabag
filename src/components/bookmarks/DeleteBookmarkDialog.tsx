@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete } from "@/components/ui/icons";
 ;
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +46,7 @@ export function DeleteBookmarkDialog({
               onOpenChange(false);
             }}
           >
-            <Trash2 className="h-4 w-4" />
+            <HugeIcon icon={IconDelete} />
             Delete
           </Button>
         </DialogFooter>

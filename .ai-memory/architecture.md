@@ -23,7 +23,7 @@
 - `src/components/layout/MobileBookmarkCapture.tsx` is the mobile-only URL submission surface.
 - `src/components/layout/DashboardSidebar.tsx` defines the main workspace navigation; `DashboardShell` renders the muted sidebar plus curved white main panel without a top feature switch.
 - `src/proxy.ts` protects the root dashboard routes and redirects legacy `/app/*` URLs to root equivalents.
-- `/onboarding` is the authenticated first-run flow. It asks users to save one real bookmark through `createBookmark(formData)` or explicitly skip, then calls `completeOnboarding()` and sends them to `/`.
+- `/onboarding` is the authenticated first-run flow. It renders a prototype-faithful three-step visual flow, asks users to save one real bookmark through `createBookmark(formData)` or explicitly skip, polls the created bookmark with `getOnboardingBookmarkPreview(bookmarkId)`, waits for a real `screenshot_url` before success, then calls `completeOnboarding()` and sends them to `/`. Processor failures stay in the creating step with retry/skip actions.
 
 ## Data and mutation surfaces
 
@@ -51,6 +51,7 @@
 - Visual-memory backfill and evaluation helpers live under `scripts/*`.
 - Bookmark search reindexing lives in `scripts/reindex-bookmark-search.mjs`; fixture evaluation lives in `scripts/evaluate-bookmark-search.mjs`.
 - Screenshot and metadata enrichment are intentionally best-effort and must remain fallback-safe.
+- Bookmark screenshots are short top-viewport Playwright captures by default (`SCREENSHOT_FULL_PAGE=false`, `SCREENSHOT_HEIGHT=900`, `MAX_WEBP_HEIGHT=900`).
 
 ## Bookmark search architecture
 

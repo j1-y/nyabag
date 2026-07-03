@@ -1,6 +1,7 @@
 "use client";
 
-import { Bookmark as BookmarkIcon, Download, Plus } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconAdd, IconBookmark, IconDownload } from "@/components/ui/icons";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookmarksProvider, useBookmarks } from "@/hooks/useBookmarks";
@@ -60,12 +61,12 @@ function DashboardGreeting({
       <div className="dashboard-greeting-actions">
         <button type="button" className="dashboard-new-bookmark-btn" onClick={onNewBookmark}>
           <span className="dashboard-new-bookmark-inner">
-            <Plus size={17} />
+            <HugeIcon icon={IconAdd} size={18} />
             New bookmark
           </span>
         </button>
         <button type="button" className="dashboard-import-btn" onClick={onImportReferences}>
-          <Download size={17} />
+          <HugeIcon icon={IconDownload} size={18} />
           Import references
         </button>
       </div>
@@ -139,7 +140,7 @@ function GridInner({
         {filtered.length === 0 && pendingBookmarks.length === 0 ? (
           <div className="empty-state dashboard-enter dashboard-enter-delayed">
             <div className="empty-state-icon" aria-hidden="true">
-              <BookmarkIcon size={24} />
+              <HugeIcon icon={IconBookmark} size={18} />
             </div>
             {search.trim().length >= 2 && semanticHasRun ? (
               <>

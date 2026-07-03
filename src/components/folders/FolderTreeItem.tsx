@@ -1,6 +1,7 @@
 "use client";
 
-import { MoreHorizontal, FolderOpen, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete, IconFolderAdd, IconFolderOpen, IconMoreHorizontal, IconPencil } from "@/components/ui/icons";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -52,8 +53,8 @@ export function FolderTreeItem({
           className={`folder-tree-item-link`}
           title={node.name}
         >
-          <FolderOpen
-            size={17}
+          <HugeIcon icon={IconFolderOpen}
+            size={18}
             aria-hidden="true"
             style={node.color ? { color: node.color } : undefined}
           />
@@ -69,7 +70,7 @@ export function FolderTreeItem({
             aria-expanded={menuOpen}
             aria-label={`More options for ${node.name}`}
           >
-            <MoreHorizontal size={15} />
+            <HugeIcon icon={IconMoreHorizontal} size={18} />
           </button>
 
           {menuOpen && (
@@ -83,7 +84,7 @@ export function FolderTreeItem({
                   setCreateSubfolderOpen(true);
                 }}
               >
-                <FolderPlus size={13} />
+                <HugeIcon icon={IconFolderAdd} size={18} />
                 New subfolder
               </button>
               <button
@@ -95,7 +96,7 @@ export function FolderTreeItem({
                   setRenameOpen(true);
                 }}
               >
-                <Pencil size={13} />
+                <HugeIcon icon={IconPencil} size={18} />
                 Rename
               </button>
               <button
@@ -107,7 +108,7 @@ export function FolderTreeItem({
                   setDeleteOpen(true);
                 }}
               >
-                <Trash2 size={13} />
+                <HugeIcon icon={IconDelete} size={18} />
                 Delete
               </button>
             </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconLoader } from "@/components/ui/icons";
 ;
 import { getDomain } from "@/lib/data";
 import type { PendingBookmark } from "@/hooks/useBookmarks";
@@ -30,7 +31,7 @@ export function PendingBookmarkCard({ bookmark }: { bookmark: PendingBookmark })
           </div>
         </div>
         <div className="pending-status">
-          <Loader2 size={14} className="animate-spin" />
+          <HugeIcon icon={IconLoader} size={18} className="animate-spin" />
           <span>Capturing moodboard preview...</span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDelete } from "@/components/ui/icons";
 ;
 import { useNotes } from "@/hooks/useNotes";
 import { IconButton } from "@/components/ui/icon-button";
@@ -33,7 +34,7 @@ export function NoteToolbar({ note, isVisible }: Props) {
         title="Delete note"
         onPointerDown={(e) => { e.stopPropagation(); deleteNote(note.id); }}
       >
-        <Trash2 size={12} />
+        <HugeIcon icon={IconDelete} size={18} />
       </IconButton>
     </div>
   );

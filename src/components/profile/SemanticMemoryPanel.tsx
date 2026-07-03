@@ -1,6 +1,7 @@
 "use client";
 
-import { Database, Loader2, Sparkles } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconDatabase, IconLoader, IconSparkles } from "@/components/ui/icons";
 import { useState, useTransition } from "react";
 import { processAllBookmarksSemanticData } from "@/lib/semantic/actions";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +41,7 @@ export function SemanticMemoryPanel() {
           <p>Process existing saves so Nyabag can search by vibe, layout, color, or pattern.</p>
         </div>
         <Badge variant="subtle">
-          <Sparkles size={12} />
+          <HugeIcon icon={IconSparkles} size={18} />
           Memory
         </Badge>
       </div>
@@ -53,12 +54,12 @@ export function SemanticMemoryPanel() {
       )}
 
       <div className="semantic-memory-state">
-        <Database size={18} />
+        <HugeIcon icon={IconDatabase} size={18} />
         <p>Runs up to 20 bookmarks at a time for your account. Existing keyword search keeps working either way.</p>
       </div>
 
       <Button type="button" onClick={processBookmarks} disabled={isPending}>
-        {isPending ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+        {isPending ? <HugeIcon icon={IconLoader} className="animate-spin" size={18} /> : <HugeIcon icon={IconSparkles} size={18} />}
         {isPending ? "Processing..." : "Process existing bookmarks"}
       </Button>
     </section>

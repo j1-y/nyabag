@@ -11,7 +11,7 @@ User saves URL
 -> bookmark row queued
 -> job row queued
 -> GitHub Actions processor
--> Playwright screenshot
+-> Playwright short viewport screenshot
 -> Sharp WebP
 -> Supabase Storage
 -> bookmark ready
@@ -28,7 +28,9 @@ The GitHub workflow also runs every 5 minutes. That scheduled run is the fallbac
 
 ## Why It Is Separate
 
-Screenshot generation is slow and fragile compared with saving a row. Playwright has to load external websites, wait for rendering, capture pixels, and Sharp has to compress the image. Moving that work into GitHub Actions keeps bookmark creation fast and avoids exposing service-role or GitHub tokens to browser code.
+Screenshot generation is slow and fragile compared with saving a row. Playwright has to load external websites, wait briefly for the top viewport to stabilize, capture pixels, and Sharp has to compress the image. Moving that work into GitHub Actions keeps bookmark creation fast and avoids exposing service-role or GitHub tokens to browser code.
+
+Nyabag bookmark screenshots are intentionally short top-viewport previews. The processor defaults to `SCREENSHOT_FULL_PAGE=false`, `SCREENSHOT_HEIGHT=900`, and `MAX_WEBP_HEIGHT=900` so saved memories load quickly and onboarding can show a compact real preview instead of a long-page capture.
 
 ## Required Supabase Schema
 

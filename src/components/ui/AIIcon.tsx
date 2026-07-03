@@ -1,13 +1,14 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconSparkles } from "@/components/ui/icons";
 
 export function AIIcon({
-  size = 16,
+  size = 18,
   className,
 }: {
   size?: number;
   className?: string;
 }) {
-  return <Sparkles size={size} className={className} aria-hidden="true" />;
+  return <HugeIcon icon={IconSparkles} size={size} className={className} aria-hidden="true" />;
 }

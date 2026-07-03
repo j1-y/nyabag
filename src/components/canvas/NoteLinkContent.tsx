@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowUpRight } from "@/components/ui/icons";
 import { useState } from "react";
 ;
 import { useNotes } from "@/hooks/useNotes";
@@ -98,7 +99,7 @@ export function NoteLinkContent({ note, isSelected }: { note: CanvasNote; isSele
           style={{ color: "var(--text3)", flexShrink: 0 }}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <ArrowUpRight size={12} />
+          <HugeIcon icon={IconArrowUpRight} size={18} />
         </a>
         {isSelected && (
           <button

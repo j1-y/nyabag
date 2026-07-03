@@ -1,21 +1,21 @@
 "use client";
 
-import { MousePointer2, Hand, Image, Share2, Sticker, Type, Video, Link as LinkIcon } from "lucide-react";
+import { HugeIcon, type IconSvgElement } from "@/components/ui/huge-icon";
+import { IconCursorPointer, IconHand, IconImage, IconLink, IconShare, IconSticker, IconText, IconVideo } from "@/components/ui/icons";
 import { useState } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { IconButton } from "@/components/ui/icon-button";
 import type { NoteType } from "@/lib/types";
-import type { LucideIcon } from "lucide-react";
 import { MediaNoteDialog } from "./MediaNoteDialog";
 import { SocialNoteDialog } from "./SocialNoteDialog";
 
-const NOTE_TYPES: { type: NoteType; icon: LucideIcon; label: string; size: number }[] = [
-  { type: "text", icon: Sticker, label: "Sticky note", size: 20 },
-  { type: "text_frame", icon: Type, label: "Text frame", size: 20 },
-  { type: "link", icon: LinkIcon, label: "Link note", size: 20 },
-  { type: "image", icon: Image, label: "Image note", size: 20 },
-  { type: "video", icon: Video, label: "Video note", size: 20 },
-  { type: "social", icon: Share2, label: "Social post", size: 20 },
+const NOTE_TYPES: { type: NoteType; icon: IconSvgElement; label: string; size: number }[] = [
+  { type: "text", icon: IconSticker, label: "Sticky note", size: 18 },
+  { type: "text_frame", icon: IconText, label: "Text frame", size: 18 },
+  { type: "link", icon: IconLink, label: "Link note", size: 18 },
+  { type: "image", icon: IconImage, label: "Image note", size: 18 },
+  { type: "video", icon: IconVideo, label: "Video note", size: 18 },
+  { type: "social", icon: IconShare, label: "Social post", size: 18 },
 ];
 
 export function CanvasToolbar() {
@@ -49,7 +49,7 @@ export function CanvasToolbar() {
               setPendingMediaNote(null);
             }}
           >
-            <MousePointer2 size={20} style={{ width: 20, height: 20 }} />
+            <HugeIcon icon={IconCursorPointer} size={18} style={{ width: 18, height: 18 }} />
           </IconButton>
           <IconButton
             type="button"
@@ -65,7 +65,7 @@ export function CanvasToolbar() {
               setPendingMediaNote(null);
             }}
           >
-            <Hand size={20} style={{ width: 20, height: 20 }} />
+            <HugeIcon icon={IconHand} size={18} style={{ width: 18, height: 18 }} />
           </IconButton>
         </div>
 
@@ -107,10 +107,7 @@ export function CanvasToolbar() {
                 setToolMode("select");
               }}
             >
-              <Icon
-                size={size}
-                style={{ width: size, height: size }}
-              />
+              <HugeIcon icon={Icon} size={size} />
             </IconButton>
           );
         })}

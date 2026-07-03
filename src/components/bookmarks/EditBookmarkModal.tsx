@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconCheck } from "@/components/ui/icons";
 import { useRef, useState, useTransition } from "react";
 ;
 import { updateBookmark } from "@/lib/actions";
@@ -102,7 +103,7 @@ export function EditBookmarkModal() {
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setSelectedFolderId(undefined); closeEdit(); }}>Cancel</Button>
               <Button type="submit" disabled={isPending}>
-                <Check /> {isPending ? "Saving..." : "Update"}
+                <HugeIcon icon={IconCheck} /> {isPending ? "Saving..." : "Update"}
               </Button>
             </DialogFooter>
           </form>
