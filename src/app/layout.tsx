@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 
@@ -7,19 +7,13 @@ import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  variable: "--font",
+  variable: "--font-inter",
   display: "swap",
 });
 
 const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-fraunces",
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
   display: "swap",
 });
 
@@ -37,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
-      <body className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${inter.variable} ${fraunces.variable}`}>
         {children}
         <SpeedInsights />
       </body>

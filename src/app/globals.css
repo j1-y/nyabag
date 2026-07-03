@@ -45,6 +45,9 @@
   --color-popover-foreground: hsl(var(--popover-foreground-token));
   --color-card: hsl(var(--card-token));
   --color-card-foreground: hsl(var(--card-foreground-token));
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-heading);
+  --font-mono: var(--font-body);
   --radius-xs: var(--radius-xs);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -190,9 +193,11 @@
     --page-gutter: clamp(1rem, 3vw, 4rem);
     --dashboard-max-w: 1440px;
     --radius: var(--radius-md);
-    --font: var(--font-inter, 'Inter', sans-serif);
-    --font-title: var(--font);
-    --font-mono: var(--font);
+    --font-body: var(--font-inter, sans-serif);
+    --font-heading: var(--font-fraunces, serif);
+    --font: var(--font-body);
+    --font-title: var(--font-heading);
+    --font-mono: var(--font-body);
     --transition: 0.18s ease;
   }
 
@@ -201,12 +206,35 @@
   }
 
   body {
+    --font-body: var(--font-inter, sans-serif);
+    --font-heading: var(--font-fraunces, serif);
+    --font: var(--font-body);
+    --font-title: var(--font-heading);
+    --font-mono: var(--font-body);
+    --font-sans: var(--font-body);
+    --font-serif: var(--font-heading);
     font-family: var(--font);
     background: var(--bg);
     color: var(--text);
     min-height: 100svh;
     overflow-x: hidden;
     transition: background var(--transition), color var(--transition);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-title);
+  }
+
+  body code,
+  body kbd,
+  body samp,
+  body pre {
+    font-family: var(--font);
   }
 
   table {
@@ -1239,7 +1267,7 @@
 .nav-item .count {
   margin-left: auto;
   font-size: 11px;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   background: var(--bg4);
   color: var(--text3);
   padding: 1px 6px;
@@ -1310,7 +1338,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  font-family: "Inter", sans-serif;
+  font-family: var(--font);
   color: var(--text);
 }
 
@@ -1355,7 +1383,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font);
   font-size: 13px;
   font-weight: 600;
   transition: background 0.15s;
@@ -1417,7 +1445,7 @@
   background: none;
   color: var(--surface-inverse-muted);
   cursor: pointer;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font);
   font-size: 13px;
   padding: 11px 14px;
   text-align: left;
@@ -1447,7 +1475,7 @@
 }
 
 .mobile-capture-heading {
-  font-family: "Inter Display", "Inter", sans-serif;
+  font-family: var(--font-title);
   max-width: 100%;
   font-size: clamp(39px, 10.6vw, 48px);
   font-weight: 700;
@@ -1501,7 +1529,7 @@
   resize: none;
   background: var(--white);
   padding: 6px 14px 12px;
-  font-family: "ui-monospace", "SFMono-Regular", "Menlo", monospace;
+  font-family: var(--font);
   font-size: 12.5px;
   line-height: 1.8;
   min-height: 130px;
@@ -1523,7 +1551,7 @@
 
 .mobile-capture-count {
   font-size: 11px;
-  font-family: "ui-monospace", monospace;
+  font-family: var(--font);
   color: var(--text3);
 }
 
@@ -1628,7 +1656,7 @@
   color: var(--white);
   border: none;
   border-radius: 10px;
-  font-family: "Inter", sans-serif;
+  font-family: var(--font);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -2438,7 +2466,7 @@
 }
 
 .search-wrap kbd {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 10px;
   color: var(--text3);
   background: var(--bg3);
@@ -2642,7 +2670,7 @@
   margin: 0;
   color: var(--text);
   font-size: clamp(28px, 6vw, 48px);
-  font-family: 'Inter Display', var(--font-title);
+  font-family: var(--font-title);
   text-align: center;
   font-weight: 500;
   line-height: 0.98;
@@ -4109,7 +4137,7 @@
   min-width: 0;
   color: var(--text2);
   font-size: 11px;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-weight: 650;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4305,7 +4333,7 @@
 .detail-domain {
   margin: 0;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.08em;
@@ -4313,7 +4341,7 @@
 
 .bookmark-detail-info h1 {
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-title);
   font-size: 32px;
   font-weight: 400;
   line-height: 1.15;
@@ -4351,7 +4379,7 @@
 
 .detail-ai-overview>span {
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
@@ -4451,7 +4479,7 @@
   background: transparent;
   border-color: var(--border);
   border-radius: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.06em;
@@ -4514,7 +4542,7 @@
 
 .ai-design-read__label {
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
@@ -4579,7 +4607,7 @@
 }
 
 .detail-table div:first-child strong {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 12px;
 }
 
@@ -4590,7 +4618,7 @@
 .detail-section h2 {
   gap: 6px;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 11px;
   font-weight: 650;
   letter-spacing: 0.07em;
@@ -4647,7 +4675,7 @@
   max-width: 100%;
   opacity: 0;
   transform: translateY(2px);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 14px;
   font-weight: 750;
   letter-spacing: 0;
@@ -4677,7 +4705,7 @@
 
 .detail-color-hex-list span {
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 10.5px;
   font-weight: 500;
 }
@@ -4787,7 +4815,7 @@
   background: var(--bg3);
   border: 0;
   border-radius: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 11px;
   font-weight: 500;
   text-align: left;
@@ -4891,7 +4919,7 @@
   color: var(--text3);
   font-size: 12px;
   font-weight: 650;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
 }
 
 /* Empty state */
@@ -5008,7 +5036,7 @@
   font-weight: 750;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
 }
 
 .capture-card__size {
@@ -5047,7 +5075,7 @@
   font-size: 11px;
   color: var(--text3);
   font-weight: 600;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
 }
 
 .capture-card__actions {
@@ -5100,7 +5128,7 @@
 }
 
 .captures-kicker {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -5120,7 +5148,7 @@
 }
 
 .captures-count {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
   font-size: 12px;
   color: var(--text3);
   padding-bottom: 3px;
@@ -5469,7 +5497,7 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
   font-size: 11px;
   color: rgb(255 255 255 / 0.35);
   letter-spacing: 0.05em;
@@ -5513,7 +5541,7 @@
 }
 
 .lb-info-label {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
   font-size: 10.5px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -5540,7 +5568,7 @@
 }
 
 .lb-info-key {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -5844,7 +5872,7 @@
 .card-url {
   font-size: 11px;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5903,7 +5931,7 @@
   margin-left: auto;
   font-size: 10px;
   color: var(--text3);
-  font-family: var(--font-mono);
+  font-family: var(--font);
 }
 
 /* List view */
@@ -6599,7 +6627,7 @@
   background: color-mix(in srgb, var(--sticky-note-ink, var(--text)) 12%, transparent);
   padding: 0.05rem 0.25rem;
   color: var(--sticky-note-ink, var(--text));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--font);
   font-size: 0.88em;
 }
 
@@ -7698,7 +7726,7 @@
   border-radius: 10px;
   background: var(--bg3);
   color: var(--text);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 20px;
   font-weight: 750;
   letter-spacing: 0;
@@ -7779,7 +7807,7 @@
   align-items: center;
   gap: 5px;
   font-size: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   color: var(--text3);
 }
 
@@ -7803,7 +7831,7 @@
   background: var(--bg4);
   color: var(--text2);
   border: 1px solid var(--border);
-  font-family: var(--font-mono);
+  font-family: var(--font);
 }
 
 .tag-row {
@@ -7871,7 +7899,7 @@
 
 
   .search-wrap kbd {
-    font-family: var(--font-mono);
+    font-family: var(--font);
     font-size: 10px;
     color: var(--text2);
     background: hsl(var(--surface-muted-token) / 0.96);
@@ -8884,7 +8912,7 @@
 .folder-color-text {
   flex: 1;
   min-width: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 12px;
 }
 
@@ -9080,7 +9108,7 @@
 }
 
 .folder-bm-domain {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 11px;
   color: var(--text3);
   white-space: nowrap;
@@ -9106,7 +9134,7 @@
 
 /* Date */
 .folder-bm-date {
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 11px;
   color: var(--text3);
   flex-shrink: 0;
@@ -9569,9 +9597,9 @@
   --line-strong: rgba(10, 10, 10, 0.18);
   --on-dark: rgba(255, 255, 255, 0.14);
   --success-green: #16A34A;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-body: var(--font), -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-display: var(--font-title);
+  --font-body: var(--font);
+  --font-mono: var(--font);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --dur-fast: 180ms;
@@ -9826,9 +9854,9 @@
 }
 
 .onboarding-app .card-chrome span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 100%;
 }
 
 .onboarding-app .card-chrome span:nth-child(1) {
@@ -9896,7 +9924,9 @@
   position: absolute;
   bottom: 10px;
   color: var(--gray-500);
-  font-family: var(--font-mono);
+  background-color: #ffffff;
+  padding: 2px 6px;
+  font-family: var(--font);
   font-size: 9px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -10049,7 +10079,7 @@
   display: grid;
   place-items: center;
   color: var(--gray-700);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 8.5px;
   font-weight: 500;
   letter-spacing: 0.03em;
@@ -10112,7 +10142,7 @@
 
 .onboarding-app .done-preview-copy span {
   color: var(--gray-700);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 9px;
 }
 
@@ -10223,13 +10253,13 @@
 
 .onboarding-app .step-dots {
   display: flex;
-  gap: 6px;
-  margin: 22px 0 0;
+  gap: 8px;
+  margin: 100px 0 0;
 }
 
 .onboarding-app .step-dots span {
-  width: 20px;
-  height: 3px;
+  width: 24px;
+  height: 4px;
   border-radius: 2px;
   background: var(--gray-200);
   transition: background var(--dur-med) var(--ease-out), width var(--dur-med) var(--ease-out);
@@ -10240,7 +10270,7 @@
 }
 
 .onboarding-app .step-dots span.is-active {
-  width: 28px;
+  width: 60px;
   background: var(--ink);
 }
 
@@ -10281,7 +10311,7 @@
 
 .onboarding-app p.lede {
   max-width: 40ch;
-  margin: 0 0 26px;
+  margin: 0 0 40px;
   color: var(--gray-700);
   font-size: 14.5px;
   line-height: 1.6;
@@ -10306,7 +10336,7 @@
   border-radius: 9px;
   background: var(--paper-dim);
   color: var(--ink);
-  font-family: var(--font-mono);
+  font-family: var(--font);
   font-size: 14px;
   transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
@@ -10387,7 +10417,7 @@
   display: flex;
   align-items: center;
   gap: 22px;
-  margin-top: 16px;
+  margin-top: 36px;
 }
 
 .onboarding-app .btn {
@@ -10688,7 +10718,7 @@
 
 @media (min-width: 1400px) {
   .onboarding-app {
-    --stage-success-window-h: 444px;
+    --stage-success-window-h: auto;
   }
 }
 
@@ -10742,7 +10772,7 @@
   }
 
   .onboarding-app .brand-row {
-    margin-bottom: 36px;
+    margin-bottom: 60px;
   }
 
   .onboarding-app .layer-done {

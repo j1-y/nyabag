@@ -89,6 +89,7 @@ function getBookmarkSnapshot(bookmarks: Bookmark[]) {
       bookmark.processing_status,
       bookmark.semantic_status ?? "",
       bookmark.screenshot_url ?? "",
+      bookmark.long_screenshot_url ?? "",
       bookmark.ai_metadata?.updated_at ?? "",
     ].join(":"))
     .join("|");

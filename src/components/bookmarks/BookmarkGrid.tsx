@@ -11,6 +11,7 @@ import { AddBookmarkModal } from "./AddBookmarkModal";
 import { EditBookmarkModal } from "./EditBookmarkModal";
 import { ImportReferencesModal } from "./ImportReferencesModal";
 import { BookmarkSearchBar } from "./BookmarkSearchBar";
+import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import type { Bookmark } from "@/lib/types";
 
 function getFirstName(profileName: string, userEmail: string) {
@@ -172,7 +173,7 @@ function GridInner({
             ))}
             {filtered.map((b, i) => (
               <BookmarkCard
-                key={`${b.id}-${b.screenshot_url ?? "no-shot"}`}
+                key={`${b.id}-${getBookmarkDisplayScreenshot(b) ?? "no-shot"}`}
                 bookmark={b}
                 index={i}
                 onEdit={openEdit}

@@ -30,6 +30,9 @@ export type Bookmark = VisualSearchResultFields & {
   screenshot_url: string | null;
   screenshot_path: string | null;
   screenshot_refreshed_at: string | null;
+  long_screenshot_url?: string | null;
+  long_screenshot_path?: string | null;
+  long_screenshot_refreshed_at?: string | null;
   summary: string;
   metadata_refreshed_at: string | null;
   note: string;

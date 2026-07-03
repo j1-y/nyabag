@@ -9,6 +9,7 @@ import { getDomain } from "@/lib/data";
 import { enrichBookmarkDesignMetadataFromScreenshot } from "@/lib/ai/bookmark-enrichment";
 import { GEMINI_MODEL } from "@/lib/ai/gemini";
 import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
+import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import { removeBookmarkScreenshot } from "@/lib/bookmarks/storage";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
 import { processBookmarkSemanticData } from "@/lib/semantic/actions";
@@ -130,11 +131,12 @@ async function enrichBookmarkWithAIScoped({
   }
 
   const bookmarkRecord = bookmark as Bookmark;
-  if (!bookmarkRecord.screenshot_url) {
+  const screenshotUrl = getBookmarkDisplayScreenshot(bookmarkRecord);
+  if (!screenshotUrl) {
     return { success: false, error: "Preview processing must finish before AI analysis can run" };
   }
 
-  const screenshotResponse = await fetch(bookmarkRecord.screenshot_url, { cache: "no-store" });
+  const screenshotResponse = await fetch(screenshotUrl, { cache: "no-store" });
   if (!screenshotResponse.ok) {
     return { success: false, error: `Could not fetch bookmark screenshot (${screenshotResponse.status})` };
   }
@@ -164,7 +166,7 @@ async function enrichBookmarkWithAIScoped({
       observed: {
         metadata: {
           source: "manual-refresh",
-          screenshot_url: bookmarkRecord.screenshot_url,
+          screenshot_url: screenshotUrl,
           title: bookmarkRecord.title,
           summary: bookmarkRecord.summary,
         },
@@ -270,6 +272,9 @@ async function createBookmarkForUser({
       screenshot_url: null,
       screenshot_path: null,
       screenshot_refreshed_at: null,
+      long_screenshot_url: null,
+      long_screenshot_path: null,
+      long_screenshot_refreshed_at: null,
       summary: "",
       metadata_refreshed_at: null,
       processing_status: "queued",
@@ -647,7 +652,7 @@ export async function updateBookmark(
 
   const { data: existing } = await supabase
     .from("bookmarks")
-    .select("url, palette, fonts, screenshot_url, screenshot_path, screenshot_refreshed_at, summary, metadata_refreshed_at")
+    .select("url, palette, fonts, screenshot_url, screenshot_path, screenshot_refreshed_at, long_screenshot_url, long_screenshot_path, long_screenshot_refreshed_at, summary, metadata_refreshed_at")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -702,6 +707,9 @@ export async function updateBookmark(
     screenshot_url: urlChanged ? null : existing?.screenshot_url ?? null,
     screenshot_path: urlChanged ? null : existing?.screenshot_path ?? null,
     screenshot_refreshed_at: urlChanged ? null : existing?.screenshot_refreshed_at ?? null,
+    long_screenshot_url: urlChanged ? null : existing?.long_screenshot_url ?? null,
+    long_screenshot_path: urlChanged ? null : existing?.long_screenshot_path ?? null,
+    long_screenshot_refreshed_at: urlChanged ? null : existing?.long_screenshot_refreshed_at ?? null,
     summary: urlChanged ? "" : existing?.summary ?? "",
     metadata_refreshed_at: urlChanged ? null : existing?.metadata_refreshed_at ?? null,
     processing_status: urlChanged ? "queued" : undefined,
@@ -731,6 +739,9 @@ export async function updateBookmark(
   if (urlChanged && existing?.screenshot_path) {
     await removeBookmarkScreenshot(supabase, existing.screenshot_path);
   } 
+  if (urlChanged && existing?.long_screenshot_path) {
+    await removeBookmarkScreenshot(supabase, existing.long_screenshot_path);
+  }
 
   if (urlChanged) {
     const job = await enqueueBookmarkProcessingJob(supabase, id, user.id, url);
@@ -977,7 +988,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
 
     const { data: bookmarkForCleanup } = await supabase
       .from("bookmarks")
-      .select("screenshot_path")
+      .select("screenshot_path, long_screenshot_path")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -1013,6 +1024,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
 
     revalidatePath("/");
     await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path);
+    await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.long_screenshot_path);
 
     return { success: true, data: undefined };
   } catch (err: unknown) {

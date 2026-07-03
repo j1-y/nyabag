@@ -408,7 +408,6 @@ export function OnboardingWizard() {
             <div className="card-body">
               <div className="layer layer-idle">
                 <div className="idle-frame">
-                  <div className="idle-cursor" />
                 </div>
                 <div className="idle-caption">Waiting for a link</div>
               </div>
@@ -481,7 +480,6 @@ export function OnboardingWizard() {
                     setError("");
                   }}
                 />
-                <div className="input-underline" />
               </div>
               {fieldError && (
                 <p className="field-error" id="urlInput-error" role="alert">
@@ -545,27 +543,10 @@ export function OnboardingWizard() {
                     <span className="btn-label">Retry</span>
                     <span className="btn-spinner" aria-hidden="true" />
                   </button>
-                  <button
-                    className="link-quiet"
-                    type="button"
-                    onClick={finishOnboarding}
-                    disabled={retryLoading || isCompleting}
-                  >
-                    I&apos;ll add one later
-                  </button>
                 </div>
               </div>
             ) : (
               <div className="processing-actions">
-                <button
-                  className="link-quiet"
-                  id="skipBtn2"
-                  type="button"
-                  onClick={finishOnboarding}
-                  disabled={isCompleting}
-                >
-                  I&apos;ll add one later
-                </button>
               </div>
             )}
           </section>
@@ -579,9 +560,7 @@ export function OnboardingWizard() {
                 <span className="btn-label">Open Nyabag <span className="btn-arrow">&rarr;</span></span>
                 <span className="btn-spinner" aria-hidden="true" />
               </button>
-              <button className="link-quiet" type="button" onClick={finishOnboarding} disabled={isCompleting}>
-                I&apos;ll add one later
-              </button>
+
             </div>
           </section>
 

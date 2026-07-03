@@ -6,9 +6,9 @@ This document applies to the product app: dashboard, bookmarks, Canvas, dialogs,
 
 ## Foundations
 
-- Font family: `--font`, mapped to `var(--font-inter, 'Inter', sans-serif)`.
-- Title font: `--font-title`, mapped to the same family unless deliberately changed at the app shell level.
-- Monospace font: `--font-mono`, mapped to `--font` for a quiet, unified app feel.
+- Body font: `--font`, mapped to `var(--font-inter, sans-serif)`.
+- Heading font: `--font-title`, mapped to `var(--font-fraunces, serif)`.
+- Legacy mono alias: `--font-mono` maps back to Inter through `--font`; do not introduce a separate monospace UI font.
 - Body base: `15px` root size, compact app typography, no negative letter spacing in app chrome.
 
 ## Color

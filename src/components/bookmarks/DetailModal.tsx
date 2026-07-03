@@ -4,6 +4,7 @@ import { HugeIcon } from "@/components/ui/huge-icon";
 import { IconArrowUpRight, IconDelete, IconFile, IconImage, IconMaximize, IconPalette, IconPencil, IconTag, IconText } from "@/components/ui/icons";
 import { useState } from "react";
 import { getDomain, getTagColor } from "@/lib/data";
+import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ export function DetailModal() {
 
   const b = detailTarget;
   const domain = getDomain(b.url);
+  const displayScreenshot = getBookmarkDisplayScreenshot(b);
 
   function handleDelete() {
     setDeleteOpen(true);
@@ -40,10 +42,10 @@ export function DetailModal() {
         <div className="relative h-[220px] bg-muted overflow-hidden border-b flex-shrink-0 group">
           <div className="absolute inset-0 overflow-y-auto">
             {!imgError ? (
-              b.screenshot_url ? (
+              displayScreenshot ? (
                 <img
                   className="w-full h-auto block"
-                  src={b.screenshot_url}
+                  src={displayScreenshot}
                   alt="Site screenshot"
                   onError={() => setImgError(true)}
                 />
@@ -62,7 +64,7 @@ export function DetailModal() {
           </div>
           <div className="absolute bottom-2 right-2 flex gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button size="sm" variant="secondary" className="h-8 px-4 text-xs shadow-md" asChild>
-              <a href={b.screenshot_url ?? b.url} target="_blank" rel="noopener noreferrer">
+              <a href={displayScreenshot ?? b.url} target="_blank" rel="noopener noreferrer">
                 <HugeIcon icon={IconMaximize} className="mr-2" /> Expand
               </a>
             </Button>

@@ -1,6 +1,6 @@
 # Nyabag Bookmark Processor
 
-This worker processes queued bookmark preview jobs outside the Next.js app. It claims jobs from Supabase, opens each URL with Playwright Chromium, captures a short top-viewport screenshot, compresses it to WebP with Sharp, uploads it to Supabase Storage, and updates the bookmark row.
+This worker processes queued bookmark preview jobs outside the Next.js app. It claims jobs from Supabase, opens each URL with Playwright Chromium, captures a normal top-viewport screenshot for onboarding, captures a long full-page screenshot for app previews and visual memory, compresses both to WebP with Sharp, uploads them to Supabase Storage, and updates the bookmark row.
 
 ## Local Run
 
@@ -31,8 +31,9 @@ npm run process
 - `SCREENSHOT_TIMEOUT_MS`, default `15000`
 - `SCREENSHOT_WIDTH`, default `1440`
 - `SCREENSHOT_HEIGHT`, default `900`
-- `SCREENSHOT_FULL_PAGE`, default `false`
 - `MAX_WEBP_HEIGHT`, default `900`
+- `LONG_SCREENSHOT_HEIGHT`, default `900`
+- `LONG_SCREENSHOT_MAX_WEBP_HEIGHT`, default `4000`
 - `WEBP_QUALITY`, default `76`
 
 The service role key must only run in trusted server or CI environments.

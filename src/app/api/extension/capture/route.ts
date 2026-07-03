@@ -240,6 +240,9 @@ export async function POST(request: NextRequest) {
       screenshot_url: isImageCapture ? safeTargetUrl.url : null,
       screenshot_path: null,
       screenshot_refreshed_at: isImageCapture ? new Date().toISOString() : null,
+      long_screenshot_url: null,
+      long_screenshot_path: null,
+      long_screenshot_refreshed_at: null,
       summary: type === "selection" ? truncate(payload.text?.trim() ?? "", 1000) : "",
       metadata_refreshed_at: null,
       processing_status:

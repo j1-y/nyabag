@@ -11,7 +11,9 @@ User saves URL
 -> bookmark row queued
 -> job row queued
 -> GitHub Actions processor
--> Playwright short viewport screenshot
+-> Playwright normal top-viewport screenshot
+-> bookmark normal preview available for onboarding
+-> Playwright long full-page screenshot
 -> Sharp WebP
 -> Supabase Storage
 -> bookmark ready
@@ -22,15 +24,20 @@ The GitHub workflow also runs every 5 minutes. That scheduled run is the fallbac
 ## Statuses
 
 - `queued`: bookmark is visible and waiting for the worker.
-- `processing`: worker claimed the job and is preparing the preview.
-- `ready`: screenshot and metadata are saved.
-- `failed`: all retries failed; the UI shows a fallback and Retry button.
+- `processing`: worker claimed the job and is preparing the normal and long previews.
+- `ready`: normal screenshot, long screenshot, and metadata are saved.
+- `failed`: processing failed; if the normal screenshot already exists, app UI can still fall back to it and the detail page offers Retry.
 
 ## Why It Is Separate
 
-Screenshot generation is slow and fragile compared with saving a row. Playwright has to load external websites, wait briefly for the top viewport to stabilize, capture pixels, and Sharp has to compress the image. Moving that work into GitHub Actions keeps bookmark creation fast and avoids exposing service-role or GitHub tokens to browser code.
+Screenshot generation is slow and fragile compared with saving a row. Playwright has to load external websites, wait briefly for the page to stabilize, capture pixels, and Sharp has to compress images. Moving that work into GitHub Actions keeps bookmark creation fast and avoids exposing service-role or GitHub tokens to browser code.
 
-Nyabag bookmark screenshots are intentionally short top-viewport previews. The processor defaults to `SCREENSHOT_FULL_PAGE=false`, `SCREENSHOT_HEIGHT=900`, and `MAX_WEBP_HEIGHT=900` so saved memories load quickly and onboarding can show a compact real preview instead of a long-page capture.
+Nyabag stores two screenshot types per processed URL:
+
+- Normal screenshot: a top-viewport capture stored in `bookmarks.screenshot_url`, used by onboarding.
+- Long screenshot: a full-page capture stored in `bookmarks.long_screenshot_url`, preferred by dashboard cards, folders, detail pages, AI metadata, and visual memory.
+
+The normal screenshot is uploaded and written first so onboarding can complete quickly. If the long screenshot fails afterward, the job is marked failed but the normal preview remains available and Retry can regenerate both.
 
 ## Required Supabase Schema
 
@@ -42,6 +49,7 @@ Run `supabase/schema.sql` in the Supabase SQL editor. It adds:
 - `claim_bookmark_processing_job(worker_id text)`.
 - `enqueue_bookmark_processing_job(...)`.
 - `request_processor_trigger(...)`.
+- `bookmarks.long_screenshot_url`, `bookmarks.long_screenshot_path`, and `bookmarks.long_screenshot_refreshed_at`.
 
 The `bookmark-screenshots` bucket must remain public for preview URLs.
 
@@ -75,7 +83,7 @@ If these vars are missing, bookmark saving still works. Jobs will wait for the 5
 3. Select `Process Bookmark Jobs`.
 4. Click `Run workflow`.
 5. Choose the deployment branch, normally `main`.
-6. Watch logs for `job claimed`, `screenshot completed`, `storage uploaded`, and `job ready`.
+6. Watch logs for `job claimed`, `normal preview ready for onboarding`, `long screenshot uploaded`, and `job ready`.
 
 ## Local Testing
 

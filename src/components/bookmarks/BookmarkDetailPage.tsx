@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { deleteBookmark, getProcessingBookmarks, refreshBookmarkScreenshot, retryBookmarkProcessing } from "@/lib/actions";
 import { processBookmarkSemanticData } from "@/lib/semantic/actions";
 import { getDomain } from "@/lib/data";
+import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import type { Bookmark } from "@/lib/types";
 import { BookmarksProvider } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
   const [refreshError, setRefreshError] = useState("");
   const [memoryError, setMemoryError] = useState("");
   const domain = getDomain(currentBookmark.url);
+  const displayScreenshot = getBookmarkDisplayScreenshot(currentBookmark);
   const aiMetadata =
     currentBookmark.ai_metadata?.status === "completed"
       ? currentBookmark.ai_metadata
@@ -234,8 +236,8 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
               </a>
             </div>
             <div className="browser-shot">
-              {currentBookmark.screenshot_url ? (
-                <img src={currentBookmark.screenshot_url} alt={`${currentBookmark.title} full page screenshot`} />
+              {displayScreenshot ? (
+                <img src={displayScreenshot} alt={`${currentBookmark.title} screenshot`} />
               ) : currentBookmark.processing_status === "queued" ? (
                 <div className="preview-fallback">
                   <span>Queued for preview</span>

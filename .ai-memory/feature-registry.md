@@ -5,7 +5,7 @@
 - Feature: Bookmark dashboard
 - Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, detail views, and sidebar-only app navigation.
 - Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
-- Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, short viewport screenshot and metadata enrichment, optional processor jobs
+- Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, normal onboarding screenshot plus long app screenshot enrichment, optional processor jobs
 - Status: Active
 
 ## Bookmark Search
@@ -59,7 +59,7 @@
 ## Onboarding
 
 - Feature: First-memory onboarding
-- Description: Prototype-faithful first-run flow that demonstrates Nyabag by asking users to save one real bookmark through the normal bookmark pipeline, animating idle/creating/success states, polling real preview status, waiting for a real screenshot before success, and offering retry/skip/open actions into the dashboard.
+- Description: Prototype-faithful first-run flow that demonstrates Nyabag by asking users to save one real bookmark through the normal bookmark pipeline, animating idle/creating/success states, polling real preview status, waiting for the normal top-viewport `screenshot_url` before success, and offering retry/skip/open actions into the dashboard.
 - Key Files: `src/app/onboarding/page.tsx`, `src/components/onboarding/*`, `src/lib/onboarding.ts`, `src/lib/onboarding-actions.ts`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, onboarding table/state, bookmark creation pipeline, bookmark preview processing status, retry bookmark processing action, favicon route
 - Status: Active

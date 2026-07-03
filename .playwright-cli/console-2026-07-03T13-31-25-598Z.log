@@ -4,3 +4,4 @@
 [    1334ms] [LOG] [Vercel Speed Insights] Failed to load script from https://va.vercel-scripts.com/v1/speed-insights/script.debug.js. Please check if any content blockers are enabled and try again. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
 [   55167ms] [LOG] [Fast Refresh] rebuilding @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
 [   55175ms] [LOG] [Fast Refresh] done in 119ms @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_115brz8._.js:2477
+[  208698ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=uFDVfLOsBmsdz3xylAaEb' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_0fhqo1d._.js:13322

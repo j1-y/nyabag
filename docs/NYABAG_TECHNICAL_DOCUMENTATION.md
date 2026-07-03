@@ -47,7 +47,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Ranked hybrid search using weighted PostgreSQL lexical retrieval, Gemini bookmark embeddings, optional visual-memory evidence, TypeScript fusion, and deterministic timezone-aware temporal filters such as `saved today` or `from last month`.
 - Tag filtering and recent filtering.
 - Visual detail page for each bookmark.
-- Short top-viewport website screenshots through the Playwright bookmark processor.
+- Dual website screenshots through the Playwright bookmark processor: a normal top-viewport image for onboarding and a long full-page image for app previews.
 - Palette extraction from stored screenshot data where available.
 - Fallback palette/font generation based on domain.
 - Metadata scraping for title, summary, and inferred tags.
@@ -57,7 +57,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 ### Bookmark Detail Pages
 
 - Dedicated route at `/bookmarks/[id]`.
-- Large screenshot preview.
+- Large long-screenshot preview with normal screenshot fallback for older records and extension captures.
 - Domain/title/URL metadata.
 - Extracted colors shown in designer-friendly categories.
 - Detected fonts.
@@ -131,7 +131,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Authenticated first-run flow centered on saving one real bookmark through a three-step idle, creating, and success experience.
 - Uses the same `createBookmark(formData)` action as the dashboard and mobile capture surfaces.
 - Preserves a single persistent stage card that morphs between internal idle, loading, and saved-preview layers.
-- Polls `getOnboardingBookmarkPreview(bookmarkId)` after creation and keeps the creating state active until `screenshot_url` exists; processor failures show retry/skip actions instead of a fake success state.
+- Polls `getOnboardingBookmarkPreview(bookmarkId)` after creation and keeps the creating state active until the normal top-viewport `screenshot_url` exists; processor failures before that normal screenshot show retry/skip actions instead of a fake success state.
 - Users can explicitly skip first bookmark creation, which calls `completeOnboarding()` and enters the dashboard.
 - Does not require workspace type, primary goal, focus area, or Telegram connection.
 
@@ -157,6 +157,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 | Icons | Hugeicons Stroke Rounded via `@hugeicons/react` and `@hugeicons/core-free-icons` |
 | UI primitives | Radix Dialog primitives for some dialogs |
 | Styling | Global CSS in `src/app/globals.css`, Tailwind tooling present |
+| Typography | Fraunces headings and Inter body text through `next/font/google` |
 | Metadata/screenshot | Playwright bookmark processor plus custom metadata scraper |
 | Deployment target | Vercel |
 
@@ -266,8 +267,10 @@ Important fields:
 | `tags` | User and inferred tags |
 | `palette` | Extracted or fallback colors |
 | `fonts` | Detected or fallback fonts |
-| `screenshot_url` | Stored bookmark screenshot URL |
-| `screenshot_refreshed_at` | Screenshot timestamp |
+| `screenshot_url` | Normal top-viewport screenshot URL used by onboarding and fallback display |
+| `screenshot_refreshed_at` | Normal screenshot timestamp |
+| `long_screenshot_url` | Long full-page screenshot URL preferred by dashboard, folder, detail, AI, and visual-memory surfaces |
+| `long_screenshot_refreshed_at` | Long screenshot timestamp |
 | `summary` | Metadata description summary |
 | `metadata_refreshed_at` | Metadata scrape timestamp |
 | `note` | User note |
@@ -398,8 +401,8 @@ Performance lifecycle:
 - `createBookmark(formData)` inserts a basic bookmark row immediately and returns it with `processing_status = "queued"`.
 - A `bookmark_processing_jobs` row is created for the same bookmark.
 - The app best-effort triggers the GitHub Actions processor through `workflow_dispatch`; a 5-minute cron fallback also runs the processor.
-- The standalone `processor/` worker uses Playwright for short top-viewport screenshots, Sharp for WebP compression, and Supabase Storage for uploads.
-- Completed enrichment marks the row `ready`; failures mark it `failed` with `processing_error` while keeping the bookmark usable.
+- The standalone `processor/` worker uses Playwright for one normal top-viewport screenshot plus one long full-page screenshot, Sharp for WebP compression, and Supabase Storage for uploads.
+- The normal screenshot is written first so onboarding can complete; completed long-screenshot enrichment marks the row `ready`. Failures mark it `failed` with `processing_error` while keeping any already-written normal screenshot usable.
 - The dashboard uses bounded polling for queued/processing bookmarks instead of storing private bookmark data in LocalStorage.
 
 Flow:
@@ -426,8 +429,8 @@ Flow:
 
 1. Validate input with `bookmarkUpdateSchema`.
 2. Fetch existing bookmark metadata.
-3. If URL changed, clear stale preview fields and set `processing_status = "queued"`.
-4. If URL did not change, preserve screenshot, palette, fonts, and summary where possible.
+3. If URL changed, clear stale normal and long preview fields and set `processing_status = "queued"`.
+4. If URL did not change, preserve screenshots, palette, fonts, and summary where possible.
 5. Update the owner-scoped row.
 6. If URL changed, enqueue a new processing job and trigger the processor best-effort.
 7. Revalidate `/`.
@@ -474,9 +477,10 @@ Module: `src/lib/data.ts`.
 Current bookmark previews are generated by `processor/process-bookmarks.mjs`:
 
 - Uses Playwright Chromium with a default `1440x900` viewport.
-- Captures from the top of the page with `SCREENSHOT_FULL_PAGE=false`.
-- Compresses to WebP with Sharp and caps output height at `MAX_WEBP_HEIGHT=900`.
-- Uploads the result to the public `bookmark-screenshots` storage bucket and stores the URL in `bookmarks.screenshot_url`.
+- Captures a normal top-viewport screenshot, compresses it to WebP capped by `MAX_WEBP_HEIGHT=900`, uploads it to the public `bookmark-screenshots` storage bucket, and stores it in `bookmarks.screenshot_url`.
+- Captures a long full-page screenshot, compresses it to WebP capped by `LONG_SCREENSHOT_MAX_WEBP_HEIGHT=4000`, uploads it to the same bucket, and stores it in `bookmarks.long_screenshot_url`.
+- Dashboard cards, folder cards, bookmark detail, manual AI refresh, and visual-memory processing prefer `long_screenshot_url` and fall back to `screenshot_url`.
+- Onboarding intentionally waits for and displays only `screenshot_url`, so users see the normal 16:9/top-viewport preview during first-run completion.
 
 `getMicrolinkPreviewData(url)` remains a legacy helper in `src/lib/data.ts` for Microlink screenshot/palette fetches, but the queued bookmark processor is the current screenshot path for newly saved bookmarks.
 
@@ -842,13 +846,14 @@ Confirm exact names in `src/lib/supabase/server.ts` and `src/lib/supabase/client
 
 Used for current bookmark previews:
 
-- Short top-viewport Playwright screenshots.
+- Normal top-viewport Playwright screenshots for onboarding.
+- Long full-page Playwright screenshots for app previews, AI metadata, visual facts, and visual-memory chunks.
 - Screenshot-derived color palettes.
 
 Important operational note:
 
 - The GitHub Actions workflow runs on dispatch and every 5 minutes as a fallback.
-- Nyabag stores screenshot URLs and refreshed timestamps so screenshots do not need to be regenerated on every login.
+- Nyabag stores normal and long screenshot URLs plus refreshed timestamps so screenshots do not need to be regenerated on every login.
 
 ### Provider Embeds
 
@@ -921,7 +926,7 @@ Current lint warnings:
 
 3. **Bookmark processor dependency**
    - Screenshot and palette extraction depend on the GitHub Actions processor, Playwright, Supabase Storage, and external site availability.
-   - Nyabag stores screenshot URLs/refreshed timestamps, but new bookmarks and changed URLs still need a successful processor run.
+   - Nyabag stores normal and long screenshot URLs/refreshed timestamps, but new bookmarks and changed URLs still need a successful processor run.
 
 4. **Social embeds are provider-dependent**
    - Private, deleted, region-restricted, or unsupported posts may fail.
@@ -991,7 +996,8 @@ Current lint warnings:
 
 - Onboarding now asks users to save one real bookmark before entering the dashboard.
 - The current onboarding UI is a prototype-faithful three-step animation with a persistent morphing stage card and real bookmark-preview polling.
-- The success step is gated by a real `screenshot_url`; failed processing stays in the creating step with retry and skip actions.
+- The success step is gated by a real normal `screenshot_url`; failed processing before the normal screenshot stays in the creating step with retry and skip actions.
+- Dashboard and detail surfaces now prefer `long_screenshot_url`, falling back to the normal screenshot for old records and extension captures.
 - The old mandatory workspace preference, focus area, and Telegram setup gates were removed from first-run onboarding.
 - Telegram capture remains available from profile and through the existing Telegram API/webhook implementation.
 - Users can still skip bookmark creation explicitly; skipped onboarding keeps empty preference fields valid in `user_onboarding`.

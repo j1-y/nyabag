@@ -71,12 +71,6 @@ function envNumber(name, fallback) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
-function envBoolean(name, fallback) {
-  const value = process.env[name];
-  if (!value) return fallback;
-  return value.toLowerCase() === "true";
-}
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -616,7 +610,8 @@ async function preparePageForScreenshot(page, timeoutMs, fullPage) {
   console.log("[processor] dynamic page prepared");
 }
 
-async function capturePreview(browser, url, timeoutMs, width, height, fullPage, quality, maxWebpHeight) {
+async function capturePreview(browser, url, options) {
+  const { timeoutMs, width, height, fullPage, quality, maxWebpHeight, label } = options;
   const safeUrl = await resolveSafeUrl(url);
 
   const page = await browser.newPage({
@@ -634,7 +629,7 @@ async function capturePreview(browser, url, timeoutMs, width, height, fullPage, 
       }
     });
 
-    console.log(`[processor] screenshot started: ${safeUrl}`);
+    console.log(`[processor] ${label} screenshot started: ${safeUrl}`);
 
     await page.goto(safeUrl, {
       waitUntil: "domcontentloaded",
@@ -651,7 +646,7 @@ async function capturePreview(browser, url, timeoutMs, width, height, fullPage, 
       timeout: timeoutMs,
     });
 
-    console.log("[processor] screenshot completed");
+    console.log(`[processor] ${label} screenshot completed`);
 
     const webp = await sharp(png, {
       animated: false,
@@ -671,7 +666,7 @@ async function capturePreview(browser, url, timeoutMs, width, height, fullPage, 
       })
       .toBuffer();
 
-    console.log("[processor] compression completed");
+    console.log(`[processor] ${label} compression completed`);
 
     const screenshotPalette = await extractPaletteFromImage(webp);
     const metadata = await extractMetadata(page, safeUrl);
@@ -706,7 +701,23 @@ async function capturePreview(browser, url, timeoutMs, width, height, fullPage, 
   }
 }
 
-async function markJobReady(supabase, job, screenshotPath, screenshotUrl, metadata, resolvedUrl) {
+async function uploadScreenshot(supabase, path, webp) {
+  const { error: uploadError } = await supabase.storage
+    .from(BUCKET)
+    .upload(path, webp, {
+      cacheControl: "31536000",
+      contentType: "image/webp",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Storage upload failed: ${uploadError.message}`);
+  }
+
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+async function updateBookmarkNormalScreenshot(supabase, job, capture, screenshotPath, screenshotUrl) {
   const fallbackTitle = getDomain(job.url) || job.url;
 
   const { data: existingBookmark, error: existingBookmarkError } = await supabase
@@ -724,23 +735,72 @@ async function markJobReady(supabase, job, screenshotPath, screenshotUrl, metada
   const { data: updatedBookmark, error: bookmarkError } = await supabase
     .from("bookmarks")
     .update({
-      title: metadata.title || fallbackTitle,
-      summary: metadata.summary,
-      tags: mergeTags(existingBookmark?.tags, metadata.tags),
-      palette: metadata.palette?.length ? metadata.palette : fallbackPalette(job.url),
-      fonts: metadata.fonts,
+      title: capture.metadata.title || fallbackTitle,
+      summary: capture.metadata.summary,
+      tags: mergeTags(existingBookmark?.tags, capture.metadata.tags),
+      palette: capture.metadata.palette?.length ? capture.metadata.palette : fallbackPalette(job.url),
+      fonts: capture.metadata.fonts,
       screenshot_url: screenshotUrl,
       screenshot_path: screenshotPath,
-      screenshot_refreshed_at: metadata.refreshedAt,
-      metadata_refreshed_at: metadata.refreshedAt,
-      processing_status: "ready",
+      screenshot_refreshed_at: capture.metadata.refreshedAt,
+      metadata_refreshed_at: capture.metadata.refreshedAt,
+      processing_status: "processing",
       processing_error: null,
-      url: resolvedUrl,
-      enrichment_finished_at: nowIso(),
+      url: capture.resolvedUrl,
     })
     .eq("id", job.bookmark_id)
     .eq("user_id", job.user_id)
     .eq("url", job.url)
+    .select("id")
+    .maybeSingle();
+
+  if (bookmarkError) {
+    throw new Error(`Could not update normal bookmark screenshot: ${bookmarkError.message}`);
+  }
+
+  if (!updatedBookmark) {
+    throw new Error("Bookmark URL changed before normal screenshot completed");
+  }
+}
+
+async function markJobReady(supabase, job, screenshots, longCapture) {
+  const fallbackTitle = getDomain(job.url) || job.url;
+
+  const { data: existingBookmark, error: existingBookmarkError } = await supabase
+    .from("bookmarks")
+    .select("tags")
+    .eq("id", job.bookmark_id)
+    .eq("user_id", job.user_id)
+    .eq("url", longCapture.resolvedUrl)
+    .maybeSingle();
+
+  if (existingBookmarkError) {
+    throw new Error(`Could not read bookmark tags: ${existingBookmarkError.message}`);
+  }
+
+  const { data: updatedBookmark, error: bookmarkError } = await supabase
+    .from("bookmarks")
+    .update({
+      title: longCapture.metadata.title || fallbackTitle,
+      summary: longCapture.metadata.summary,
+      tags: mergeTags(existingBookmark?.tags, longCapture.metadata.tags),
+      palette: longCapture.metadata.palette?.length ? longCapture.metadata.palette : fallbackPalette(job.url),
+      fonts: longCapture.metadata.fonts,
+      screenshot_url: screenshots.normalUrl,
+      screenshot_path: screenshots.normalPath,
+      screenshot_refreshed_at: screenshots.normalRefreshedAt,
+      long_screenshot_url: screenshots.longUrl,
+      long_screenshot_path: screenshots.longPath,
+      long_screenshot_refreshed_at: longCapture.metadata.refreshedAt,
+      metadata_refreshed_at: longCapture.metadata.refreshedAt,
+      processing_status: "ready",
+      processing_error: null,
+      url: longCapture.resolvedUrl,
+      enrichment_finished_at: nowIso(),
+    })
+    .eq("id", job.bookmark_id)
+    .eq("user_id", job.user_id)
+    .eq("url", longCapture.resolvedUrl)
     .select("id")
     .maybeSingle();
 
@@ -831,40 +891,54 @@ async function processJob(supabase, browser, job, config) {
 
   await updateBookmarkProcessing(supabase, job);
 
-  const { webp, metadata, observed, deterministicVisualFacts, resolvedUrl } = await capturePreview(
-    browser,
-    job.url,
-    config.timeoutMs,
-    config.width,
-    config.height,
-    config.fullPage,
-    config.quality,
-    config.maxWebpHeight
-  );
+  const normalCapture = await capturePreview(browser, job.url, config.normal);
+  const normalPath = `${job.user_id}/${job.bookmark_id}/screenshot-${Date.now()}.webp`;
+  const normalUrl = await uploadScreenshot(supabase, normalPath, normalCapture.webp);
 
-  const screenshotPath = `${job.user_id}/${job.bookmark_id}/screenshot-${Date.now()}.webp`;
+  console.log("[processor] normal screenshot uploaded");
 
-  const { error: uploadError } = await supabase.storage
-    .from(BUCKET)
-    .upload(screenshotPath, webp, {
-      cacheControl: "31536000",
-      contentType: "image/webp",
-      upsert: true,
-    });
+  await updateBookmarkNormalScreenshot(supabase, job, normalCapture, normalPath, normalUrl);
 
-  if (uploadError) {
-    throw new Error(`Storage upload failed: ${uploadError.message}`);
+  console.log(`[processor] normal preview ready for onboarding: ${job.id}`);
+
+  let longCapture;
+  let longPath;
+  let longUrl;
+
+  try {
+    longCapture = await capturePreview(browser, normalCapture.resolvedUrl, config.long);
+    longPath = `${job.user_id}/${job.bookmark_id}/long-screenshot-${Date.now()}.webp`;
+    longUrl = await uploadScreenshot(supabase, longPath, longCapture.webp);
+
+    console.log("[processor] long screenshot uploaded");
+
+    await markJobReady(
+      supabase,
+      job,
+      {
+        normalPath,
+        normalUrl,
+        normalRefreshedAt: normalCapture.metadata.refreshedAt,
+        longPath,
+        longUrl,
+      },
+      longCapture
+    );
+
+    console.log(`[processor] job ready: ${job.id}`);
+  } catch (error) {
+    console.error(
+      `[processor] long screenshot error: ${job.id}`,
+      error instanceof Error ? error.message : error
+    );
+    await markJobFailedAfterNormalScreenshot(
+      supabase,
+      job,
+      error,
+      normalCapture.resolvedUrl
+    );
+    return;
   }
-
-  console.log("[processor] storage uploaded");
-
-  const screenshotUrl = supabase.storage
-    .from(BUCKET)
-    .getPublicUrl(screenshotPath).data.publicUrl;
-
-  await markJobReady(supabase, job, screenshotPath, screenshotUrl, metadata, resolvedUrl);
-
-  console.log(`[processor] job ready: ${job.id}`);
 
   let visualFactsRow = null;
   let bookmarkForMemory = null;
@@ -892,8 +966,8 @@ async function processJob(supabase, browser, job, config) {
       supabase,
       job,
       bookmark: bookmarkForAi,
-      screenshot: webp,
-      observed,
+      screenshot: longCapture.webp,
+      observed: longCapture.observed,
     });
 
     aiMetadataForMemory = aiMetadata;
@@ -952,8 +1026,8 @@ async function processJob(supabase, browser, job, config) {
     try {
       aiVisualFacts = await enrichVisualFactsWithAi({
         bookmark: bookmarkForMemory,
-        screenshot: webp,
-        deterministic: deterministicVisualFacts,
+        screenshot: longCapture.webp,
+        deterministic: longCapture.deterministicVisualFacts,
       });
     } catch (error) {
       console.warn(
@@ -962,12 +1036,15 @@ async function processJob(supabase, browser, job, config) {
       );
     }
 
-    const mergedVisualFacts = mergeVisualFacts(deterministicVisualFacts, aiVisualFacts);
+    const mergedVisualFacts = mergeVisualFacts(
+      longCapture.deterministicVisualFacts,
+      aiVisualFacts
+    );
     visualFactsRow = await upsertVisualFacts(
       supabase,
       job,
       mergedVisualFacts,
-      deterministicVisualFacts.snapshot,
+      longCapture.deterministicVisualFacts.snapshot,
       aiVisualFacts
     );
 
@@ -990,7 +1067,7 @@ async function processJob(supabase, browser, job, config) {
       supabase,
       job,
       null,
-      deterministicVisualFacts?.snapshot ?? {},
+      longCapture.deterministicVisualFacts?.snapshot ?? {},
       null,
       error instanceof Error ? error.message : String(error)
     ).catch((upsertError) => {
@@ -1023,6 +1100,36 @@ async function processJob(supabase, browser, job, config) {
   }
 }
 
+async function markJobFailedAfterNormalScreenshot(supabase, job, error, resolvedUrl) {
+  const message =
+    error instanceof Error ? error.message : "Long screenshot processing failed";
+
+  const safeMessage = message.slice(0, 1000);
+
+  await supabase
+    .from("bookmark_processing_jobs")
+    .update({
+      status: "failed",
+      error_message: safeMessage,
+      locked_at: null,
+      locked_by: null,
+    })
+    .eq("id", job.id);
+
+  await supabase
+    .from("bookmarks")
+    .update({
+      processing_status: "failed",
+      processing_error: safeMessage,
+      enrichment_finished_at: nowIso(),
+    })
+    .eq("id", job.bookmark_id)
+    .eq("user_id", job.user_id)
+    .eq("url", resolvedUrl);
+
+  console.log(`[processor] long screenshot failed after normal preview: ${job.id}`);
+}
+
 async function main() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1031,14 +1138,30 @@ async function main() {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
   }
 
+  const timeoutMs = envNumber("SCREENSHOT_TIMEOUT_MS", 15_000);
+  const width = envNumber("SCREENSHOT_WIDTH", 1440);
+  const height = envNumber("SCREENSHOT_HEIGHT", 900);
+  const quality = envNumber("WEBP_QUALITY", 76);
   const config = {
     maxJobs: envNumber("MAX_JOBS_PER_RUN", 5),
-    timeoutMs: envNumber("SCREENSHOT_TIMEOUT_MS", 15_000),
-    width: envNumber("SCREENSHOT_WIDTH", 1440),
-    height: envNumber("SCREENSHOT_HEIGHT", 900),
-    fullPage: envBoolean("SCREENSHOT_FULL_PAGE", false),
-    quality: envNumber("WEBP_QUALITY", 76),
-    maxWebpHeight: envNumber("MAX_WEBP_HEIGHT", 900),
+    normal: {
+      label: "normal",
+      timeoutMs,
+      width,
+      height,
+      fullPage: false,
+      quality,
+      maxWebpHeight: envNumber("MAX_WEBP_HEIGHT", 900),
+    },
+    long: {
+      label: "long",
+      timeoutMs,
+      width,
+      height: envNumber("LONG_SCREENSHOT_HEIGHT", height),
+      fullPage: true,
+      quality,
+      maxWebpHeight: envNumber("LONG_SCREENSHOT_MAX_WEBP_HEIGHT", 4000),
+    },
   };
   const geminiConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
   const geminiModel = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash";
@@ -1060,12 +1183,21 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 
   console.log("[processor] config", {
     maxJobs: config.maxJobs,
-    timeoutMs: config.timeoutMs,
-    width: config.width,
-    height: config.height,
-    fullPage: config.fullPage,
-    quality: config.quality,
-    maxWebpHeight: config.maxWebpHeight,
+    normal: {
+      timeoutMs: config.normal.timeoutMs,
+      width: config.normal.width,
+      height: config.normal.height,
+      fullPage: config.normal.fullPage,
+      maxWebpHeight: config.normal.maxWebpHeight,
+    },
+    long: {
+      timeoutMs: config.long.timeoutMs,
+      width: config.long.width,
+      height: config.long.height,
+      fullPage: config.long.fullPage,
+      maxWebpHeight: config.long.maxWebpHeight,
+    },
+    quality,
     geminiConfigured,
     geminiModel,
     geminiEmbeddingModel: EMBEDDING_MODEL,

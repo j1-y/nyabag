@@ -60,6 +60,10 @@
 
 - Reason: The first-run success card should prove the core visual memory loop with an actual `screenshot_url`. If processing fails, onboarding stays in the creating step with retry/skip actions instead of showing placeholder success.
 
-## Decision: Bookmark screenshots are short viewport captures
+## Decision: Bookmark screenshots are split into normal and long captures
 
-- Reason: Nyabag previews should load quickly and read as compact memories, so the processor captures the top viewport by default with `SCREENSHOT_FULL_PAGE=false`, `SCREENSHOT_HEIGHT=900`, and `MAX_WEBP_HEIGHT=900`.
+- Reason: Onboarding needs a fast, compact proof screenshot, while the app detail and moodboard surfaces need a longer visual memory. The processor now stores the normal top-viewport image in `screenshot_url` and the full-page app preview in `long_screenshot_url`, with app UI falling back to the normal image for old records and extension screenshots.
+
+## Decision: Product typography uses Fraunces and Inter only
+
+- Reason: A two-font system gives Nyabag a clear editorial heading voice while keeping body, control, and code-like UI text quiet and consistent. Fraunces is loaded for headings through `next/font/google`; Inter is loaded for all non-heading text. Legacy mono token names remain compatibility aliases only and resolve back to Inter.

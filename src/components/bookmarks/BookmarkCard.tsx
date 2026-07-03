@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useRef, useState, useTransition } from "r
 import { useRouter } from "next/navigation";
 import { retryBookmarkProcessing } from "@/lib/actions";
 import { getDomain, getFaviconUrl } from "@/lib/data";
+import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import type { Bookmark } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { AIMetadataChip } from "./AIMetadataChip";
@@ -26,8 +27,9 @@ function BookmarkCardComponent({
   onDelete: (id: string) => void;
 }) {
   const router = useRouter();
+  const screenshot = getBookmarkDisplayScreenshot(bookmark);
   const [imageState, setImageState] = useState({
-    src: bookmark.screenshot_url,
+    src: screenshot,
     loaded: false,
     error: false,
   });
@@ -42,7 +44,6 @@ function BookmarkCardComponent({
 
   const domain = getDomain(bookmark.url);
   const favicon = getFaviconUrl(bookmark.url);
-  const screenshot = bookmark.screenshot_url;
   const eagerPreview = index < EAGER_PREVIEW_COUNT;
   const imageLoaded = imageState.src === screenshot && imageState.loaded;
   const imageError = imageState.src === screenshot && imageState.error;
