@@ -1,10 +1,4 @@
 User-agent: *
-Allow: /
-Allow: /blog
-Allow: /blog/
-Disallow: /app
-Disallow: /app/
-Disallow: /login
-Disallow: /signup
-
-Sitemap: https://www.nyabag.com/sitemap.xml
+Disallow: /
+Allow: /privacy
+Allow: /terms

@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteFooter } from "@/components/site/SiteFooter";
-import { SiteHeader } from "@/components/site/SiteHeader";
-import { SITE_URL } from "@/lib/blog";
 import styles from "../privacy/privacy.module.css";
 
-const TERMS_URL = `${SITE_URL}/terms`;
+const TERMS_URL = "https://app.nyabag.com/terms";
 const CONTACT_EMAIL = "privacy@nyabag.com";
 
 export const metadata: Metadata = {
@@ -61,8 +58,6 @@ const toc = [
 export default function TermsPage() {
   return (
     <div className={styles.root}>
-      <SiteHeader />
-
       <header className={styles.hero}>
         <div className={styles.container}>
           <p className={styles.eyebrow}>Terms of Service</p>
@@ -264,8 +259,6 @@ export default function TermsPage() {
           </section>
         </main>
       </div>
-
-      <SiteFooter />
     </div>
   );
 }

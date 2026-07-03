@@ -4,7 +4,7 @@
 
 - Feature: Bookmark dashboard
 - Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, and detail views.
-- Key Files: `src/app/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
+- Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, screenshot and metadata enrichment, optional processor jobs
 - Status: Active
 
@@ -20,7 +20,7 @@
 
 - Feature: Infinite canvas
 - Description: Desktop-first visual workspace for notes, media, links, embeds, sections, and drag-resize interactions.
-- Key Files: `src/app/app/(dashboard)/canvas/page.tsx`, `src/components/canvas/*`, `src/hooks/useNotes.tsx`, `src/lib/canvas-actions.ts`, `src/lib/canvas-data.ts`, `src/lib/social-embeds.ts`, `supabase/schema.sql`
+- Key Files: `src/app/(dashboard)/canvas/page.tsx`, `src/components/canvas/*`, `src/hooks/useNotes.tsx`, `src/lib/canvas-actions.ts`, `src/lib/canvas-data.ts`, `src/lib/social-embeds.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, storage, signed URLs, route-level loading UI
 - Status: Active
 
@@ -28,7 +28,7 @@
 
 - Feature: Mobile URL capture
 - Description: Constrained mobile experience that lets authenticated users submit URLs without opening the full desktop workspace.
-- Key Files: `src/components/layout/MobileBookmarkCapture.tsx`, `src/components/layout/DashboardShell.tsx`, `src/app/app/(dashboard)/layout.tsx`, `src/lib/actions.ts`
+- Key Files: `src/components/layout/MobileBookmarkCapture.tsx`, `src/components/layout/DashboardShell.tsx`, `src/app/(dashboard)/layout.tsx`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, bookmark creation pipeline
 - Status: Active
 
@@ -36,7 +36,7 @@
 
 - Feature: Profile settings
 - Description: User profile editor with avatar upload plus semantic and Telegram-related panels.
-- Key Files: `src/app/app/(dashboard)/profile/page.tsx`, `src/components/profile/*`, `src/lib/profile.ts`, `src/lib/actions.ts`
+- Key Files: `src/app/(dashboard)/profile/page.tsx`, `src/components/profile/*`, `src/lib/profile.ts`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, `profile-avatars` storage bucket
 - Status: Active
 
@@ -44,17 +44,17 @@
 
 - Feature: Folder hierarchy
 - Description: Nested bookmark organization with inbox, breadcrumbs, move, rename, and delete flows.
-- Key Files: `src/app/app/(dashboard)/folders/[folderId]/page.tsx`, `src/components/folders/*`, `src/lib/folder-actions.ts`, `src/lib/folders.ts`, `supabase/schema.sql`
+- Key Files: `src/app/(dashboard)/folders/[folderId]/page.tsx`, `src/components/folders/*`, `src/lib/folder-actions.ts`, `src/lib/folders.ts`, `supabase/schema.sql`
 - Dependencies: Bookmark tables, folder tables, Supabase auth
 - Status: Active
 
 ## Design DNA
 
 - Feature: Design DNA extraction
-- Description: Saved styleguide views extracted from bookmarks, including colors, typography, and component signals.
-- Key Files: `src/app/app/(dashboard)/design-dna/page.tsx`, `src/app/app/(dashboard)/design-dna/[id]/page.tsx`, `src/lib/design-dna/*`, `src/components/design-dna/*`, `src/lib/actions.ts`
+- Description: Coming-soon saved styleguide surface; supporting code exists, but no live route is currently mounted.
+- Key Files: `src/lib/design-dna/*`, `src/components/design-dna/*`, `src/lib/actions.ts`
 - Dependencies: Bookmark data, extraction pipeline, screenshot data
-- Status: Active
+- Status: Unrouted
 
 ## Onboarding
 
@@ -72,12 +72,12 @@
 - Dependencies: Admin auth, service-role access, email provider, Supabase data
 - Status: Active
 
-## Public Site
+## Legal Support
 
-- Feature: Marketing and content site
-- Description: Public landing page, blog, about, contact, privacy, and terms routes.
-- Key Files: `src/app/page.tsx`, `src/app/LandingPage.tsx`, `src/app/blog/*`, `src/app/about/page.tsx`, `src/app/contact/page.tsx`, `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`, `src/components/site/*`
-- Dependencies: Public metadata, analytics script, crawlable internal links
+- Feature: Legal support pages
+- Description: Public privacy and terms pages retained for the app-only deployment.
+- Key Files: `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`
+- Dependencies: Public metadata
 - Status: Active
 
 ## Extension

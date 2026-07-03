@@ -205,8 +205,8 @@ export async function createBookmarkFolder(
 
   if (error) return { success: false, error: error.message };
 
-  revalidatePath("/app");
-  if (parent_id) revalidatePath(`/app/folders/${parent_id}`);
+  revalidatePath("/");
+  if (parent_id) revalidatePath(`/folders/${parent_id}`);
 
   return { success: true, data: data as BookmarkFolder };
 }
@@ -295,10 +295,10 @@ export async function updateBookmarkFolder(
 
   if (error) return { success: false, error: error.message };
 
-  revalidatePath("/app");
-  revalidatePath(`/app/folders/${id}`);
-  if (targetFolder.parent_id) revalidatePath(`/app/folders/${targetFolder.parent_id}`);
-  if (effectiveParentId) revalidatePath(`/app/folders/${effectiveParentId}`);
+  revalidatePath("/");
+  revalidatePath(`/folders/${id}`);
+  if (targetFolder.parent_id) revalidatePath(`/folders/${targetFolder.parent_id}`);
+  if (effectiveParentId) revalidatePath(`/folders/${effectiveParentId}`);
 
   return { success: true, data: data as BookmarkFolder };
 }
@@ -337,9 +337,9 @@ export async function deleteBookmarkFolder(folderId: string): Promise<ActionResu
 
   if (deleteError) return { success: false, error: deleteError.message };
 
-  revalidatePath("/app");
-  revalidatePath("/app/folders/inbox");
-  if (targetFolder.parent_id) revalidatePath(`/app/folders/${targetFolder.parent_id}`);
+  revalidatePath("/");
+  revalidatePath("/folders/inbox");
+  if (targetFolder.parent_id) revalidatePath(`/folders/${targetFolder.parent_id}`);
 
   return { success: true, data: undefined };
 }
@@ -391,11 +391,11 @@ export async function moveBookmarkToFolder(
 
   if (error) return { success: false, error: error.message };
 
-  revalidatePath("/app");
-  revalidatePath(`/app/bookmarks/${bookmarkId}`);
-  revalidatePath("/app/folders/inbox");
-  if (folderId) revalidatePath(`/app/folders/${folderId}`);
-  if (bookmark.folder_id) revalidatePath(`/app/folders/${bookmark.folder_id}`);
+  revalidatePath("/");
+  revalidatePath(`/bookmarks/${bookmarkId}`);
+  revalidatePath("/folders/inbox");
+  if (folderId) revalidatePath(`/folders/${folderId}`);
+  if (bookmark.folder_id) revalidatePath(`/folders/${bookmark.folder_id}`);
 
   return { success: true, data: data as Bookmark };
 }
@@ -429,9 +429,9 @@ export async function bulkMoveBookmarksToFolder(
 
   if (error) return { success: false, error: error.message };
 
-  revalidatePath("/app");
-  if (folderId) revalidatePath(`/app/folders/${folderId}`);
-  revalidatePath("/app/folders/inbox");
+  revalidatePath("/");
+  if (folderId) revalidatePath(`/folders/${folderId}`);
+  revalidatePath("/folders/inbox");
 
   return { success: true, data: { count: bookmarkIds.length } };
 }

@@ -10,7 +10,7 @@ const CanvasBoard = nextDynamic(() =>
 export const dynamic = "force-dynamic";
 
 export default async function CanvasPage() {
-  return timeAsync("initial /app/canvas data loading", async () => {
+  return timeAsync("initial /canvas data loading", async () => {
     const supabase = await createClient();
     const {
       data: { user },

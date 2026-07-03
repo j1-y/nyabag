@@ -576,7 +576,7 @@ export async function createMediaNoteFromUrl(
     };
   }
 
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
 
   return {
     success: true,
@@ -751,7 +751,7 @@ export async function createMediaNoteWithUpload(
     };
   }
 
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
 
   const signed = await withSignedUrl(
     supabase,
@@ -859,7 +859,7 @@ export async function updateTextNoteRichContent(
     .single();
 
   if (error) return { success: false, error: error.message };
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return { success: true, data: data as unknown as CanvasNote };
 }
 
@@ -885,7 +885,7 @@ export async function updateNoteColor(
     .single();
 
   if (error) return { success: false, error: error.message };
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return { success: true, data: data as unknown as CanvasNote };
 }
 
@@ -948,7 +948,7 @@ export async function uploadNoteMedia(
   }
 
   await removeStoredMedia(supabase, note);
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   const signed = await withSignedUrl(supabase, data as unknown as CanvasNote);
   return { success: true, data: signed };
 }
@@ -977,7 +977,7 @@ export async function removeNoteMedia(id: string): Promise<ActionResult<CanvasNo
 
   if (error) return { success: false, error: error.message };
   await removeStoredMedia(supabase, note);
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return { success: true, data: data as unknown as CanvasNote };
 }
 
@@ -1175,7 +1175,7 @@ export async function createSectionFromNotes(
     return { success: false, error: updateError.message };
   }
 
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return {
     success: true,
     data: { section, notes: (updatedNotes ?? []) as unknown as CanvasNote[], missingNoteIds },
@@ -1204,7 +1204,7 @@ export async function updateSectionLabel(
     .single();
 
   if (error) return { success: false, error: error.message };
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return { success: true, data: data as unknown as CanvasSection };
 }
 
@@ -1299,7 +1299,7 @@ export async function deleteSection(id: string): Promise<ActionResult> {
     .eq("user_id", user.id);
 
   if (error) return { success: false, error: error.message };
-  revalidatePath("/app/canvas");
+  revalidatePath("/canvas");
   return { success: true, data: undefined };
 }
 

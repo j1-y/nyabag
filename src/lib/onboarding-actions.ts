@@ -117,8 +117,8 @@ export async function saveOnboardingPreferences(
   }
 
   revalidatePath("/onboarding");
-  revalidatePath("/app");
-  revalidatePath("/app/profile");
+  revalidatePath("/");
+  revalidatePath("/profile");
 
   return { success: true, data: data as UserOnboarding };
 }
@@ -156,8 +156,8 @@ export async function completeOnboarding(): Promise<ActionResult<UserOnboarding>
   }
 
   revalidatePath("/onboarding");
-  revalidatePath("/app");
-  revalidatePath("/app/profile");
+  revalidatePath("/");
+  revalidatePath("/profile");
 
   return { success: true, data: data as UserOnboarding };
 }

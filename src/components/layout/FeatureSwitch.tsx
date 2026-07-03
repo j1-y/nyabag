@@ -34,15 +34,15 @@ function FeatureSwitchLinkInner({ children }: { children: React.ReactNode }) {
 
 export function FeatureSwitch() {
   const pathname = usePathname();
-  const isNotes = pathname.startsWith("/app/canvas");
+  const isNotes = pathname.startsWith("/canvas");
 
   return (
     <nav className="feature-switch" aria-label="Primary">
-      <FeatureSwitchLink href="/app" active={!isNotes}>
+      <FeatureSwitchLink href="/" active={!isNotes}>
         <Grid size={14} />
         Bookmarks
       </FeatureSwitchLink>
-      <FeatureSwitchLink href="/app/canvas" active={isNotes}>
+      <FeatureSwitchLink href="/canvas" active={isNotes}>
         <FileText size={14} />
         Canvas
       </FeatureSwitchLink>

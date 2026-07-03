@@ -35,3 +35,7 @@
 ## Decision: Temporal bookmark search is deterministic
 
 - Reason: Save-date language has a finite grammar and must respect browser timezone boundaries without spending Gemini calls or risking nondeterministic date interpretation.
+
+## Decision: `app.nyabag.com` is app-only
+
+- Reason: The deployment should open directly to the authenticated product at `/`, with marketing/editorial pages removed and legacy `/app/*` URLs redirected to root equivalents for compatibility.

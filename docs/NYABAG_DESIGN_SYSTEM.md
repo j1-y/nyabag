@@ -2,7 +2,7 @@
 
 Nyabag app UI should feel premium, engineered, compact, and consistent. New product work must start from the shared primitives in `src/components/ui` and the tokens in `src/app/globals.css`.
 
-This document applies to the product app: dashboard, bookmarks, Canvas, dialogs, app layout, profile, admin, and loading states. Marketing pages and `src/components/site` may keep their own editorial layout rules.
+This document applies to the product app: dashboard, bookmarks, Canvas, dialogs, app layout, profile, admin, legal support pages, and loading states.
 
 ## Foundations
 
@@ -77,4 +77,4 @@ Toolbar buttons and dense actions should usually be `32px` or `40px`. Dialog act
 - `npm run check:design-system` rejects unsupported app radii and non-8px app spacing patterns in app-scoped files.
 - `npm run lint` and `npx tsc --noEmit` must pass before merging UI changes.
 
-Allowed exceptions are narrow: marketing pages, typography sizes and line heights, 1px borders, transforms, shadows, z-index, canvas coordinates, content colors, SVG geometry, and intrinsic media sizing.
+Allowed exceptions are narrow: legal support pages, typography sizes and line heights, 1px borders, transforms, shadows, z-index, canvas coordinates, content colors, SVG geometry, and intrinsic media sizing.

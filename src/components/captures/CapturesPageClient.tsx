@@ -330,7 +330,7 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
           </div>
           <h2>No captures yet</h2>
           <p>Use the Nyabag browser extension to capture screenshots. They&apos;ll appear here.</p>
-          <Link href="/app" className="captures-empty__link">
+          <Link href="/" className="captures-empty__link">
             Back to bookmarks
           </Link>
         </div>

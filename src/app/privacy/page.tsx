@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SiteFooter } from "@/components/site/SiteFooter";
-import { SiteHeader } from "@/components/site/SiteHeader";
 import styles from "./privacy.module.css";
 
 export const metadata: Metadata = {
@@ -9,13 +7,13 @@ export const metadata: Metadata = {
   description:
     "Read the Nyabag Privacy Policy to understand how Nyabag collects, uses, shares, and protects personal information.",
   alternates: {
-    canonical: "https://www.nyabag.com/privacy",
+    canonical: "https://app.nyabag.com/privacy",
   },
   openGraph: {
     title: "Privacy Policy - Nyabag",
     description:
       "How Nyabag collects, uses, shares, and protects personal information.",
-    url: "https://www.nyabag.com/privacy",
+    url: "https://app.nyabag.com/privacy",
     siteName: "Nyabag",
     images: [
       {
@@ -72,8 +70,6 @@ const personalInfoRows = [
 export default function PrivacyPage() {
   return (
     <div className={styles.root}>
-      <SiteHeader />
-
       <header className={styles.hero}>
         <div className={styles.container}>
           <p className={styles.eyebrow}>Privacy Policy</p>
@@ -601,8 +597,6 @@ export default function PrivacyPage() {
           </section>
         </main>
       </div>
-
-      <SiteFooter />
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function FolderTree({ folders, collapsed }: FolderTreeProps) {
   const [createOpen, setCreateOpen] = useState(false);
 
   const tree = buildFolderTree(folders);
-  const uncatActive = pathname === "/app/folders/inbox";
+  const uncatActive = pathname === "/folders/inbox";
 
   if (collapsed) {
     return null; // Sidebar collapsed — don't show tree
@@ -43,7 +43,7 @@ export function FolderTree({ folders, collapsed }: FolderTreeProps) {
       <nav className="folder-tree-nav" aria-label="Folders">
         {/* Inbox */}
         <Link
-          href="/app/folders/inbox"
+          href="/folders/inbox"
           className={`folder-tree-static-item folder-tree-root-item ${uncatActive ? "active" : ""}`}
           title="Inbox bookmarks"
         >

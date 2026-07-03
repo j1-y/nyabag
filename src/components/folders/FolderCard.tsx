@@ -32,7 +32,7 @@ export function FolderCard({ folder, bookmarkCount }: FolderCardProps) {
 
   return (
     <Link
-      href={`/app/folders/${folder.id}`}
+      href={`/folders/${folder.id}`}
       className="folder-grid-card"
       aria-label={`Open folder: ${folder.name}`}
     >

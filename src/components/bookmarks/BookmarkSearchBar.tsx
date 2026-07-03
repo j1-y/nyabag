@@ -35,7 +35,7 @@ export function BookmarkSearchBar() {
       inputRef.current?.focus();
     }
 
-    router.replace("/app");
+    router.replace("/");
   }, [hasOpenModal, router, searchParams]);
 
   useEffect(() => {

@@ -5,6 +5,14 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname === "/app" || pathname.startsWith("/app/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname === "/app" ? "/" : pathname.slice(4);
+    return NextResponse.redirect(url);
+  }
+
   // If env vars are not yet configured, skip auth and let pages handle it
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return NextResponse.next({ request });
@@ -34,13 +42,22 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isAuthRoute =
     pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isOnboardingRoute =
     pathname === "/onboarding" || pathname.startsWith("/onboarding/");
+  const isDashboardRoute =
+    pathname === "/" ||
+    pathname.startsWith("/bookmarks/") ||
+    pathname === "/canvas" ||
+    pathname.startsWith("/canvas/") ||
+    pathname === "/captures" ||
+    pathname.startsWith("/captures/") ||
+    pathname.startsWith("/folders/") ||
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/");
   const isProtectedAppRoute =
-    pathname === "/app" || pathname.startsWith("/app/");
+    isDashboardRoute;
 
   if (!user && (isProtectedAppRoute || isOnboardingRoute)) {
     const url = request.nextUrl.clone();
@@ -73,7 +90,7 @@ export async function proxy(request: NextRequest) {
 
   if (onboardingComplete && (isAuthRoute || isOnboardingRoute)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/app";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

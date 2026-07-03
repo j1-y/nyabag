@@ -44,19 +44,19 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    href: "/app",
+    href: "/",
     label: "Bookmarks",
     icon: Bookmark,
     match: (p) =>
-      p === "/app" ||
-      p.startsWith("/app/bookmarks") ||
-      p.startsWith("/app/folders"),
+      p === "/" ||
+      p.startsWith("/bookmarks") ||
+      p.startsWith("/folders"),
   },
   {
-    href: "/app/canvas",
+    href: "/canvas",
     label: "Canvas",
     icon: FileText,
-    match: (p) => p.startsWith("/app/canvas"),
+    match: (p) => p.startsWith("/canvas"),
   },
   {
     label: "Design DNA",
@@ -65,10 +65,10 @@ const NAV_ITEMS: NavItem[] = [
     comingSoon: true,
   },
   {
-    href: "/app/captures",
+    href: "/captures",
     label: "Captures",
     icon: Camera,
-    match: (p) => p.startsWith("/app/captures"),
+    match: (p) => p.startsWith("/captures"),
   },
 ];
 
@@ -107,7 +107,7 @@ export function DashboardSidebar({
         {/* ── Header ── */}
         <div className="dashboard-sidebar-header">
           <Link
-            href="/app"
+            href="/"
             className="dashboard-sidebar-brand"
             aria-label="Nyabag home"
           >
@@ -283,7 +283,7 @@ export function DashboardSidebar({
               <DropdownMenuSeparator />
 
               <DropdownMenuItem asChild>
-                <Link href="/app/profile" className="sidebar-profile-menu-link">
+                <Link href="/profile" className="sidebar-profile-menu-link">
                   <User size={15} aria-hidden="true" />
                   Profile
                 </Link>

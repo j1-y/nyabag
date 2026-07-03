@@ -23,7 +23,7 @@ export function FolderTreeItem({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const isActive = pathname === `/app/folders/${node.id}`;
+  const isActive = pathname === `/folders/${node.id}`;
 
   function handleMenuToggle(e: React.MouseEvent) {
     e.preventDefault();
@@ -48,7 +48,7 @@ export function FolderTreeItem({
           .join(" ")}
       >
         <Link
-          href={`/app/folders/${node.id}`}
+          href={`/folders/${node.id}`}
           className={`folder-tree-item-link`}
           title={node.name}
         >

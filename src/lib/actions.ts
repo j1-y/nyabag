@@ -209,8 +209,8 @@ async function enrichBookmarkWithAIScoped({
       .eq("id", bookmarkId)
       .eq("user_id", userId);
 
-    revalidatePath("/app");
-    revalidatePath(`/app/bookmarks/${bookmarkId}`);
+    revalidatePath("/");
+    revalidatePath(`/bookmarks/${bookmarkId}`);
 
     return { success: true, data: metadata as BookmarkAiMetadata };
   } catch (error) {
@@ -231,8 +231,8 @@ async function enrichBookmarkWithAIScoped({
     if (failedError) return { success: false, error: failedError.message };
 
     console.warn("[enrichBookmarkWithAI] Gemini enrichment failed:", shortError);
-    revalidatePath("/app");
-    revalidatePath(`/app/bookmarks/${bookmarkId}`);
+    revalidatePath("/");
+    revalidatePath(`/bookmarks/${bookmarkId}`);
 
     return { success: false, error: shortError };
   }
@@ -378,8 +378,8 @@ export async function createBookmark(
 
     if (!result.success) return result;
 
-    revalidatePath("/app");
-    if (validFolderId) revalidatePath(`/app/folders/${validFolderId}`);
+    revalidatePath("/");
+    if (validFolderId) revalidatePath(`/folders/${validFolderId}`);
 
     return result;
   });
@@ -612,7 +612,7 @@ export async function importBookmarks(
   }
 
   if (result.created.length > 0) {
-    revalidatePath("/app");
+    revalidatePath("/");
   }
 
   return {
@@ -745,9 +745,9 @@ export async function updateBookmark(
     });
   }
 
-  revalidatePath("/app");
-  if (resolvedFolderId) revalidatePath(`/app/folders/${resolvedFolderId}`);
-  revalidatePath("/app/folders/inbox");
+  revalidatePath("/");
+  if (resolvedFolderId) revalidatePath(`/folders/${resolvedFolderId}`);
+  revalidatePath("/folders/inbox");
   return { success: true, data };
 }
 
@@ -834,8 +834,8 @@ export async function refreshBookmarkScreenshot(
 
   await triggerProcessorBestEffort("refreshBookmarkScreenshot");
 
-  revalidatePath("/app");
-  revalidatePath(`/app/bookmarks/${id}`);
+  revalidatePath("/");
+  revalidatePath(`/bookmarks/${id}`);
 
   return {
     success: true,
@@ -927,8 +927,8 @@ export async function retryBookmarkProcessing(
 
   await triggerProcessorBestEffort("retryBookmarkProcessing");
 
-  revalidatePath("/app");
-  revalidatePath(`/app/bookmarks/${id}`);
+  revalidatePath("/");
+  revalidatePath(`/bookmarks/${id}`);
 
   return {
     success: true,
@@ -1011,7 +1011,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
       return { success: false, error: "Bookmark not found" };
     }
 
-    revalidatePath("/app");
+    revalidatePath("/");
     await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path);
 
     return { success: true, data: undefined };
@@ -1139,9 +1139,9 @@ export async function updateProfile(
         .publicUrl
     : null;
 
-  revalidatePath("/app/profile");
-  revalidatePath("/app");
-  revalidatePath("/app/canvas");
+  revalidatePath("/profile");
+  revalidatePath("/");
+  revalidatePath("/canvas");
 
   return {
     success: true,
@@ -1248,7 +1248,7 @@ export async function createTelegramConnectionCode(): Promise<
     };
   }
 
-  revalidatePath("/app/profile");
+  revalidatePath("/profile");
 
   return {
     success: true,
@@ -1277,12 +1277,12 @@ export async function disconnectTelegram(): Promise<ActionResult> {
 
   if (error) return { success: false, error: error.message };
 
-  revalidatePath("/app/profile");
+  revalidatePath("/profile");
   return { success: true, data: undefined };
 }
 
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  revalidatePath("/app");
+  revalidatePath("/");
 }

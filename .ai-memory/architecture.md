@@ -3,26 +3,26 @@
 ## Core layout
 
 - Root app layout: `src/app/layout.tsx`
-- Public site: `src/app/page.tsx`, `src/app/about/page.tsx`, `src/app/blog/page.tsx`, `src/app/contact/page.tsx`, `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`
+- App-only deployment for `app.nyabag.com`; no marketing, blog, about, or contact routes are present.
 - Auth flows: `src/app/login/page.tsx`, `src/app/signup/page.tsx`, `src/app/onboarding/page.tsx`
-- Dashboard group: `src/app/app/(dashboard)/layout.tsx`
+- Legal support routes: `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`
+- Dashboard group: `src/app/(dashboard)/layout.tsx`
 
 ## Dashboard routes
 
-- Bookmarks home: `src/app/app/(dashboard)/page.tsx`
-- Bookmark detail: `src/app/app/(dashboard)/bookmarks/[id]/page.tsx`
-- Canvas: `src/app/app/(dashboard)/canvas/page.tsx`
-- Folders: `src/app/app/(dashboard)/folders/[folderId]/page.tsx`
-- Design DNA list/detail: `src/app/app/(dashboard)/design-dna/page.tsx`, `src/app/app/(dashboard)/design-dna/[id]/page.tsx`
-- Captures: `src/app/app/(dashboard)/captures/page.tsx`
-- Profile: `src/app/app/(dashboard)/profile/page.tsx`
+- Bookmarks home: `src/app/(dashboard)/page.tsx` at `/`
+- Bookmark detail: `src/app/(dashboard)/bookmarks/[id]/page.tsx`
+- Canvas: `src/app/(dashboard)/canvas/page.tsx`
+- Folders: `src/app/(dashboard)/folders/[folderId]/page.tsx`
+- Captures: `src/app/(dashboard)/captures/page.tsx`
+- Profile: `src/app/(dashboard)/profile/page.tsx`
 
 ## Route and shell behavior
 
 - `src/components/layout/DashboardShell.tsx` controls the desktop shell and mobile capture experience.
 - `src/components/layout/MobileBookmarkCapture.tsx` is the mobile-only URL submission surface.
 - `src/components/layout/DashboardSidebar.tsx` and `src/components/layout/DashboardNav.tsx` define the main workspace navigation.
-- `src/components/site/*` owns the marketing-site chrome.
+- `src/proxy.ts` protects the root dashboard routes and redirects legacy `/app/*` URLs to root equivalents.
 
 ## Data and mutation surfaces
 
@@ -65,6 +65,7 @@
 
 - Desktop-first behavior is the default.
 - Mobile capture is intentionally limited.
-- Route groups under `src/app/app/(dashboard)` are organizational and do not change the URL.
+- Route groups under `src/app/(dashboard)` are organizational and do not change the URL.
+- Legacy `/app/*` links are compatibility redirects only; do not add duplicate `/app` routes.
 - Server actions must continue to enforce auth and ownership checks.
 - Docs are part of the architecture: update this file when routes, flows, or boundaries change.

@@ -23,7 +23,7 @@ function LoginForm() {
     process.env.NEXT_PUBLIC_SUPABASE_URL !==
       "https://your-project-id.supabase.co";
 
-  const nextPath = getSafeInternalPath(searchParams.get("next"), "/app");
+  const nextPath = getSafeInternalPath(searchParams.get("next"), "/");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

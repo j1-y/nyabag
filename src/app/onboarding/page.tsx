@@ -26,7 +26,7 @@ export default async function OnboardingPage() {
   ]);
 
   if (hasCompletedOnboarding(onboarding)) {
-    redirect("/app");
+    redirect("/");
   }
 
   const telegramState = telegramResult.success

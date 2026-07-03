@@ -1,8 +1,8 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-06-17
+Last updated: 2026-07-03
 
-Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
+Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated workspace lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
 For agent workflows, start with `AGENTS.md` and `.ai-memory/README.md`. The `.ai-memory/` layer is the short-form working memory for coding agents, while this document remains the canonical architecture source. Bookmark search details live in `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`.
 
@@ -166,10 +166,15 @@ src/app/
   layout.tsx                         Root app layout and global CSS import
   login/page.tsx                     Login page
   signup/page.tsx                    Signup page
+  onboarding/page.tsx                First-run setup flow
+  privacy/page.tsx                   Public legal support page
+  terms/page.tsx                     Public legal support page
   (dashboard)/layout.tsx             Authenticated dashboard layout
   (dashboard)/page.tsx               Main bookmarks dashboard
   (dashboard)/canvas/page.tsx        Notes canvas page
   (dashboard)/bookmarks/[id]/page.tsx Bookmark detail route
+  (dashboard)/captures/page.tsx      Captures route
+  (dashboard)/folders/[folderId]/page.tsx Folder route
   (dashboard)/profile/page.tsx       Profile route
 
 src/components/
@@ -205,15 +210,22 @@ supabase/
 
 - `/login`: email/password login UI.
 - `/signup`: account creation UI.
+- `/onboarding`: authenticated first-run setup flow.
+- `/privacy`: public privacy policy.
+- `/terms`: public terms of service.
 
 ### Authenticated Dashboard Routes
 
 - `/`: bookmarks dashboard.
 - `/bookmarks/[id]`: bookmark detail page.
 - `/canvas`: notes canvas.
+- `/captures`: captured references.
+- `/folders/[folderId]`: folder-specific bookmark view.
 - `/profile`: profile settings.
 
 The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`.
+
+Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do not add duplicate `/app` routes.
 
 `DashboardShell` responsibilities:
 
@@ -387,7 +399,7 @@ Flow:
 7. Insert bookmark row with `processing_status = "queued"`.
 8. Enqueue `bookmark_processing_jobs`.
 9. Trigger the GitHub Actions processor best-effort.
-10. Revalidate `/app`.
+10. Revalidate `/`.
 
 ### Bookmark Update Flow
 
@@ -401,7 +413,7 @@ Flow:
 4. If URL did not change, preserve screenshot, palette, fonts, and summary where possible.
 5. Update the owner-scoped row.
 6. If URL changed, enqueue a new processing job and trigger the processor best-effort.
-7. Revalidate `/app`.
+7. Revalidate `/`.
 
 ### Bookmark Delete Flow
 

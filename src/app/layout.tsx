@@ -13,9 +13,10 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.nyabag.com"),
-  title: "Nyabag - Your Second Memory for Design",
-  description: "Nyabag is a visual memory system for designers to save, organize, and rediscover websites, screenshots, UI references, color palettes, fonts, and creative inspiration.",
+  metadataBase: new URL("https://app.nyabag.com"),
+  title: "Nyabag App",
+  description:
+    "Nyabag is a visual memory workspace for saving, organizing, and rediscovering design references, bookmarks, screenshots, notes, and creative inspiration.",
 };
 
 export default function RootLayout({

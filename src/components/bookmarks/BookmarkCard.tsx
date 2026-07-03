@@ -139,7 +139,7 @@ function BookmarkCardComponent({
         ref={cardRef}
         className={`bm-card moodboard-card ${visible ? "is-visible" : "is-pending-reveal"}`}
         style={{ animationDelay: `${index * 0.04}s` }}
-        onClick={() => router.push(`/app/bookmarks/${bookmark.id}`)}
+        onClick={() => router.push(`/bookmarks/${bookmark.id}`)}
         aria-label={bookmark.title}
       >
         <div className="moodboard-shot">

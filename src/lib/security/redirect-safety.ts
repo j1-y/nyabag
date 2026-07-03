@@ -1,6 +1,6 @@
 export function getSafeInternalPath(
   value: string | null | undefined,
-  fallback = "/app"
+  fallback = "/"
 ) {
   if (!value) return fallback;
 

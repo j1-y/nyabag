@@ -8,7 +8,7 @@ import { timeAsync } from "@/lib/perf";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  return timeAsync("initial /app dashboard data loading", async () => {
+  return timeAsync("initial / dashboard data loading", async () => {
     const supabase = await timeAsync("dashboard: create supabase client", async () => {
       return createClient();
     });

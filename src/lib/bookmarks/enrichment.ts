@@ -129,8 +129,8 @@ export async function enrichBookmark(
         throw error;
       }
 
-      revalidatePath("/app");
-      revalidatePath(`/app/bookmarks/${bookmarkId}`);
+      revalidatePath("/");
+      revalidatePath(`/bookmarks/${bookmarkId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Bookmark enrichment failed";
       await supabase
@@ -142,7 +142,7 @@ export async function enrichBookmark(
         })
         .eq("id", bookmarkId)
         .eq("user_id", userId);
-      revalidatePath("/app");
+      revalidatePath("/");
     }
   });
 }

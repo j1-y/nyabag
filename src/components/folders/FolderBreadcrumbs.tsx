@@ -30,7 +30,7 @@ export function FolderBreadcrumbs({ breadcrumbs, isInbox }: FolderBreadcrumbsPro
                 </span>
               ) : (
                 <Link
-                  href={`/app/folders/${folder.id}`}
+                  href={`/folders/${folder.id}`}
                   className="folder-breadcrumb-item folder-breadcrumb-link"
                 >
                   <span className="folder-breadcrumb-text">{folder.name}</span>

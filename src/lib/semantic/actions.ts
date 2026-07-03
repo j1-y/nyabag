@@ -432,8 +432,8 @@ export async function processBookmarkSemanticData(bookmarkId: string): Promise<A
 
     if (updateError) throw new Error(updateError.message);
 
-    revalidatePath("/app");
-    revalidatePath(`/app/bookmarks/${bookmarkId}`);
+    revalidatePath("/");
+    revalidatePath(`/bookmarks/${bookmarkId}`);
 
     return { success: true, data: updated as Bookmark };
   } catch (error) {
@@ -450,8 +450,8 @@ export async function processBookmarkSemanticData(bookmarkId: string): Promise<A
       .eq("id", bookmarkId)
       .eq("user_id", user.id);
 
-    revalidatePath("/app");
-    revalidatePath(`/app/bookmarks/${bookmarkId}`);
+    revalidatePath("/");
+    revalidatePath(`/bookmarks/${bookmarkId}`);
 
     return { success: false, error: message };
   }
@@ -482,8 +482,8 @@ export async function processAllBookmarksSemanticData(): Promise<ActionResult<Ba
     else counts.failed += 1;
   }
 
-  revalidatePath("/app");
-  revalidatePath("/app/profile");
+  revalidatePath("/");
+  revalidatePath("/profile");
 
   return { success: true, data: counts };
 }

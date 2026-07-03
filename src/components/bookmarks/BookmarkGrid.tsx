@@ -111,7 +111,7 @@ function GridInner({
   useEffect(() => {
     if (searchParams.get("add") === "1") {
       openAdd();
-      router.replace("/app");
+      router.replace("/");
     }
   }, [openAdd, router, searchParams]);
 

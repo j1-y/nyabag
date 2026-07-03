@@ -252,7 +252,7 @@ export function OnboardingWizard({
     startTransition(async () => {
       const result = await completeOnboarding();
       if (result.success) {
-        router.replace("/app");
+        router.replace("/");
         return;
       }
 
@@ -399,7 +399,7 @@ export function OnboardingWizard({
         return;
       }
 
-      router.replace("/app");
+      router.replace("/");
     });
   }
 

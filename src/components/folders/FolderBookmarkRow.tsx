@@ -58,9 +58,9 @@ export function FolderBookmarkRow({ bookmark, onEdit, onDelete, isInbox }: Props
       className={`folder-table-row ${isExiting ? "exiting" : ""}`}
       role="button"
       tabIndex={0}
-      onClick={() => router.push(`/app/bookmarks/${bookmark.id}`)}
+      onClick={() => router.push(`/bookmarks/${bookmark.id}`)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") router.push(`/app/bookmarks/${bookmark.id}`);
+        if (e.key === "Enter") router.push(`/bookmarks/${bookmark.id}`);
       }}
       aria-label={`Open ${bookmark.title}`}
     >

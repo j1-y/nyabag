@@ -41,7 +41,7 @@ export function FolderDeleteDialog({
         onDeleted?.();
         onOpenChange(false);
         router.refresh();
-        router.push("/app");
+        router.push("/");
       } else {
         setError(result.error);
       }

@@ -32,7 +32,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
   function handleDelete() {
     startTransition(async () => {
       const result = await deleteBookmark(currentBookmark.id);
-      if (result.success) router.push("/app");
+      if (result.success) router.push("/");
       else console.error("Failed to delete bookmark:", result.error);
     });
   }
@@ -106,7 +106,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
     <div className="bookmark-detail-page">
       <main className="bookmark-detail-shell">
         <section className="bookmark-detail-info">
-          <button className="detail-back" onClick={() => router.push("/app")}>
+          <button className="detail-back" onClick={() => router.push("/")}>
             <ArrowLeft size={15} />
             Back to bookmarks
           </button>

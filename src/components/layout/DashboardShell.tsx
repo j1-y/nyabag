@@ -94,7 +94,7 @@ export function DashboardShell({
     window.dispatchEvent(new Event(SIDEBAR_EVENT));
   }, []);
 
-  return isMobile && pathname === "/app" ? (
+  return isMobile && pathname === "/" ? (
     <MobileBookmarkCapture
       profileName={profileName}
       userEmail={userEmail}

@@ -145,7 +145,7 @@ export function MobileBookmarkCapture({
   return (
     <main className="mobile-capture-page">
       <nav className="mobile-capture-navbar" aria-label="Mobile capture navigation">
-        <Link href="/app" className="mobile-capture-brand" aria-label="Nyabag home">
+        <Link href="/" className="mobile-capture-brand" aria-label="Nyabag home">
           <Image
             src="/assets/logo.svg"
             alt="Nyabag"
