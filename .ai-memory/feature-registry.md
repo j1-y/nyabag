@@ -3,7 +3,7 @@
 ## Bookmarks
 
 - Feature: Bookmark dashboard
-- Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, and detail views.
+- Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, detail views, and sidebar-only app navigation.
 - Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, screenshot and metadata enrichment, optional processor jobs
 - Status: Active
@@ -19,7 +19,7 @@
 ## Canvas
 
 - Feature: Infinite canvas
-- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, and drag-resize interactions.
+- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, drag-resize interactions, and sidebar-only app navigation.
 - Key Files: `src/app/(dashboard)/canvas/page.tsx`, `src/components/canvas/*`, `src/hooks/useNotes.tsx`, `src/lib/canvas-actions.ts`, `src/lib/canvas-data.ts`, `src/lib/social-embeds.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, storage, signed URLs, route-level loading UI
 - Status: Active
@@ -58,10 +58,10 @@
 
 ## Onboarding
 
-- Feature: Onboarding wizard
-- Description: First-run setup that captures workspace context and gates access until the user completes setup.
+- Feature: First-memory onboarding
+- Description: First-run flow that demonstrates Nyabag by asking users to save one real bookmark through the normal bookmark pipeline, with an explicit skip option for entering the dashboard without creating a bookmark.
 - Key Files: `src/app/onboarding/page.tsx`, `src/components/onboarding/*`, `src/lib/onboarding.ts`, `src/lib/onboarding-actions.ts`, `src/lib/actions.ts`
-- Dependencies: Supabase auth, onboarding table/state
+- Dependencies: Supabase auth, onboarding table/state, bookmark creation pipeline
 - Status: Active
 
 ## Admin

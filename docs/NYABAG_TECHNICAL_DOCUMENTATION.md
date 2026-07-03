@@ -42,6 +42,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 ### Bookmarks
 
 - Add, edit, and delete bookmarks.
+- First-run onboarding asks users to save one real bookmark so the core product loop is visible before setup work.
 - Moodboard-style bookmark grid.
 - Ranked hybrid search using weighted PostgreSQL lexical retrieval, Gemini bookmark embeddings, optional visual-memory evidence, TypeScript fusion, and deterministic timezone-aware temporal filters such as `saved today` or `from last month`.
 - Tag filtering and recent filtering.
@@ -122,6 +123,16 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Stores name, email, phone, and optional avatar.
 - Avatar uploads go to Supabase Storage bucket `profile-avatars`.
 - Avatar public URL is derived from the storage path.
+- Telegram capture setup remains available from profile and is not required during onboarding.
+
+### Onboarding
+
+- Route at `/onboarding`.
+- Authenticated first-run flow centered on saving one real bookmark.
+- Uses the same `createBookmark(formData)` action as the dashboard and mobile capture surfaces.
+- Shows a compact saved-memory preview while screenshot and metadata processing continue asynchronously.
+- Users can explicitly skip first bookmark creation, which calls `completeOnboarding()` and enters the dashboard.
+- Does not require workspace type, primary goal, focus area, or Telegram connection.
 
 ### Mobile URL Capture
 
@@ -166,7 +177,7 @@ src/app/
   layout.tsx                         Root app layout and global CSS import
   login/page.tsx                     Login page
   signup/page.tsx                    Signup page
-  onboarding/page.tsx                First-run setup flow
+  onboarding/page.tsx                First-memory onboarding flow
   privacy/page.tsx                   Public legal support page
   terms/page.tsx                     Public legal support page
   (dashboard)/layout.tsx             Authenticated dashboard layout
@@ -210,7 +221,7 @@ supabase/
 
 - `/login`: email/password login UI.
 - `/signup`: account creation UI.
-- `/onboarding`: authenticated first-run setup flow.
+- `/onboarding`: authenticated first-run flow that saves one real bookmark or lets the user explicitly skip into the dashboard.
 - `/privacy`: public privacy policy.
 - `/terms`: public terms of service.
 
@@ -223,7 +234,7 @@ supabase/
 - `/folders/[folderId]`: folder-specific bookmark view.
 - `/profile`: profile settings.
 
-The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`.
+The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`. Desktop app navigation lives in `DashboardSidebar`; the top Bookmarks/Canvas feature switch was removed so pages render directly inside a curved white main panel.
 
 Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do not add duplicate `/app` routes.
 
@@ -233,7 +244,7 @@ Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do n
 - Uses `useSyncExternalStore` to avoid hydration drift for sidebar/mobile state.
 - Detects mobile width using a 768px breakpoint.
 - Shows `MobileBookmarkCapture` on mobile.
-- Shows sidebar, dashboard nav, and page children on desktop.
+- Shows sidebar and page children on desktop.
 
 ## Supabase Data Model
 
@@ -376,6 +387,11 @@ Security is enforced at several layers:
 ### Bookmark Creation Flow
 
 Main action: `createBookmark(formData)` in `src/lib/actions.ts`.
+
+Used by:
+- Dashboard bookmark creation.
+- Mobile URL capture.
+- First-memory onboarding.
 
 Performance lifecycle:
 - `createBookmark(formData)` inserts a basic bookmark row immediately and returns it with `processing_status = "queued"`.
@@ -878,26 +894,19 @@ http://localhost:3000
 Current observed status:
 
 - `npm run build` passes.
-- `npm run lint` fails on unrelated legacy script files:
-  - `check_db.js`
-  - `test_microlink.js`
+- `npm run lint` passes with warnings.
 
-Lint failure cause:
-
-- Both files use CommonJS `require()`, which violates `@typescript-eslint/no-require-imports`.
-
-Existing warnings:
+Current lint warnings:
 
 - Several UI files use raw `<img>` tags, triggering Next.js image optimization warnings.
-- Some auth/layout files have unused variables related to older logo handling.
+- Some bookmark, folder, layout, and extension files have unused variables or missing image alt text.
 
 ## Known Issues
 
-1. **Lint errors in debug scripts**
-   - Files: `check_db.js`, `test_microlink.js`.
-   - Cause: CommonJS `require()` imports.
-   - Impact: `npm run lint` exits non-zero.
-   - Suggested fix: convert to ESM imports or exclude debug scripts from ESLint.
+1. **Lint warnings in legacy UI and extension files**
+   - Files include bookmark, folder, layout, capture, auth, canvas, and extension surfaces.
+   - Cause: raw `<img>` usage, missing image alt text, and unused imports/variables.
+   - Impact: `npm run lint` currently exits successfully, but warnings should be cleaned up over time.
 
 2. **Raw `<img>` warnings**
    - Several components use `<img>` directly.
@@ -972,6 +981,13 @@ Existing warnings:
 - Mobile authenticated users see a URL capture form instead of the full dashboard/canvas.
 - Submitted URLs create real bookmarks through the existing bookmark pipeline.
 
+### First-memory onboarding
+
+- Onboarding now asks users to save one real bookmark before entering the dashboard.
+- The old mandatory workspace preference, focus area, and Telegram setup gates were removed from first-run onboarding.
+- Telegram capture remains available from profile and through the existing Telegram API/webhook implementation.
+- Users can still skip bookmark creation explicitly; skipped onboarding keeps empty preference fields valid in `user_onboarding`.
+
 ### Bookmark detail hydration date issue
 
 - Date display was adjusted to avoid server/client locale mismatch issues.
@@ -982,6 +998,7 @@ Existing warnings:
 - Moodboard became the default bookmark view.
 - Redundant view/ribbon controls were removed.
 - Universal dashboard navigation/sidebar shell was added around dashboard pages.
+- The redundant top Bookmarks/Canvas feature switch was removed; the sidebar is now the single app navigation surface, and the main content panel uses a shell-only curved left boundary.
 
 ## Suggested Future Improvements
 

@@ -39,3 +39,11 @@
 ## Decision: `app.nyabag.com` is app-only
 
 - Reason: The deployment should open directly to the authenticated product at `/`, with marketing/editorial pages removed and legacy `/app/*` URLs redirected to root equivalents for compatibility.
+
+## Decision: Onboarding demonstrates value with one real memory
+
+- Reason: New users should understand Nyabag by saving a real bookmark before configuration work. Workspace preferences, focus area, and Telegram connection remain outside the first-run gate and can be handled later from the dashboard/profile surfaces.
+
+## Decision: Dashboard navigation lives in the sidebar
+
+- Reason: The top Bookmarks/Canvas feature switch duplicated the sidebar and made the shell feel heavier. The authenticated app now uses the sidebar as the single navigation surface, with a curved white main panel as a layout-boundary exception to the normal 10px control radius.

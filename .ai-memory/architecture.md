@@ -21,8 +21,9 @@
 
 - `src/components/layout/DashboardShell.tsx` controls the desktop shell and mobile capture experience.
 - `src/components/layout/MobileBookmarkCapture.tsx` is the mobile-only URL submission surface.
-- `src/components/layout/DashboardSidebar.tsx` and `src/components/layout/DashboardNav.tsx` define the main workspace navigation.
+- `src/components/layout/DashboardSidebar.tsx` defines the main workspace navigation; `DashboardShell` renders the muted sidebar plus curved white main panel without a top feature switch.
 - `src/proxy.ts` protects the root dashboard routes and redirects legacy `/app/*` URLs to root equivalents.
+- `/onboarding` is the authenticated first-run flow. It asks users to save one real bookmark through `createBookmark(formData)` or explicitly skip, then calls `completeOnboarding()` and sends them to `/`.
 
 ## Data and mutation surfaces
 

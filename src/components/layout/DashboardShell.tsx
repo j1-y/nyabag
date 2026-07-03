@@ -2,7 +2,6 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
-import { DashboardNav } from "./DashboardNav";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { MobileBookmarkCapture } from "./MobileBookmarkCapture";
 import type { BookmarkFolder } from "@/lib/types";
@@ -111,7 +110,6 @@ export function DashboardShell({
         folders={folders}
       />
       <div className="main-content">
-        <DashboardNav />
         {children}
       </div>
     </div>
