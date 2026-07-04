@@ -413,11 +413,32 @@ export function OnboardingWizard() {
               </div>
 
               <div className="layer layer-loading">
-                <div className="scan-sweep" />
-                <div className="bar b1" />
-                <div className="bar b2" />
-                <div className="bar b3" />
-                <div className="bar b4" />
+                <div className="loading-website" aria-hidden="true">
+                  <div className="scan-sweep" />
+                  <div className="website-browser-bar">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="website-toolbar">
+                    <span className="website-pill is-left" />
+                    <span className="website-pill" />
+                    <span className="website-pill" />
+                    <span className="website-pill" />
+                  </div>
+                  <div className="website-center-stack">
+                    <span className="website-line is-title" />
+                    <span className="website-line is-title-short" />
+                    <span className="website-rule" />
+                    <span className="website-rule is-short" />
+                  </div>
+                  <div className="website-card-grid">
+                    <span />
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
               </div>
 
               <div className="layer layer-done">

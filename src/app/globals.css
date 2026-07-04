@@ -9607,7 +9607,6 @@
   --dur-slow: 800ms;
   --stage-window-w: 520px;
   --stage-scene-w: 640px;
-  --stage-success-window-h: 400px;
   min-height: 100dvh;
   margin: 0;
   font-family: var(--font-body);
@@ -9796,10 +9795,10 @@
   position: absolute;
   inset: 0;
   width: min(var(--stage-window-w), calc(100% - 24px));
-  height: auto;
+
   aspect-ratio: 16 / 9;
   margin: auto;
-  overflow: hidden;
+  overflow: visible;
   background: var(--paper);
   border-radius: 12px;
   box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.55);
@@ -9815,9 +9814,15 @@
 }
 
 .onboarding-app .stage[data-step="3"] .main-card {
-  animation: onboarding-settle var(--dur-slow) var(--ease-spring);
+  top: 50%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  transform: translateY(-50%);
+  animation: onboarding-settle-success var(--dur-slow) var(--ease-spring);
   aspect-ratio: auto;
-  height: min(var(--stage-success-window-h), calc(100% - 24px));
+  height: auto;
 }
 
 @keyframes onboarding-breathe {
@@ -9831,17 +9836,17 @@
   }
 }
 
-@keyframes onboarding-settle {
+@keyframes onboarding-settle-success {
   0% {
-    transform: translateY(-5px) scale(1);
+    transform: translateY(calc(-50% - 5px)) scale(1);
   }
 
   45% {
-    transform: translateY(3px) scale(1.035);
+    transform: translateY(calc(-50% + 3px)) scale(1.035);
   }
 
   100% {
-    transform: translateY(0) scale(1);
+    transform: translateY(-50%) scale(1);
   }
 }
 
@@ -9874,6 +9879,12 @@
 .onboarding-app .card-body {
   position: relative;
   height: calc(100% - 33px);
+  overflow: hidden;
+  border-radius: 0 0 12px 12px;
+}
+
+.onboarding-app .stage[data-step="3"] .card-body {
+  height: auto;
 }
 
 .onboarding-app .layer {
@@ -9933,51 +9944,106 @@
 }
 
 .onboarding-app .layer-loading {
-  position: relative;
-  gap: 8px;
-  justify-content: flex-start;
-  padding-top: 22px;
+  justify-content: stretch;
+  padding: 14px;
 }
 
 .onboarding-app .stage[data-step="2"] .layer-loading {
   opacity: 1;
 }
 
+.onboarding-app .loading-website {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8f8f6 100%);
+}
+
 .onboarding-app .scan-sweep {
   position: absolute;
-  left: 0;
-  right: 0;
+  left: -8%;
+  right: -8%;
   top: 0;
-  height: 46%;
-  background: linear-gradient(180deg, transparent, rgba(10, 10, 10, 0.07), transparent);
+  height: 36%;
+  z-index: 4;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(10, 10, 10, 0.055) 47%, rgba(10, 10, 10, 0.035) 56%, transparent 100%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.82), transparent);
+  filter: blur(0.2px);
   opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-100% - 22px));
 }
 
 .onboarding-app .stage[data-step="2"] .scan-sweep {
   opacity: 1;
-  animation: onboarding-scan 2.1s var(--ease-out) infinite;
+  animation: onboarding-scan 2.35s var(--ease-out) infinite;
 }
 
 @keyframes onboarding-scan {
   0% {
-    transform: translateY(-60%);
+    transform: translateY(calc(-100% - 22px));
   }
 
   100% {
-    transform: translateY(320%);
+    transform: translateY(calc(238% + 22px));
   }
 }
 
-.onboarding-app .bar {
+.onboarding-app .website-browser-bar,
+.onboarding-app .website-toolbar,
+.onboarding-app .website-center-stack,
+.onboarding-app .website-card-grid {
   position: relative;
-  height: 8px;
-  align-self: flex-start;
-  overflow: hidden;
-  background: var(--gray-200);
-  border-radius: 4px;
+  z-index: 2;
 }
 
-.onboarding-app .bar::after {
+.onboarding-app .website-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: calc(100% - 34px);
+  height: 20px;
+  margin: 12px auto 0;
+  padding: 0 11px;
+  border-radius: 7px;
+  background: var(--paper-dim);
+}
+
+.onboarding-app .website-browser-bar span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gray-500);
+  opacity: 0.8;
+}
+
+.onboarding-app .website-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 19px 16px 0;
+}
+
+.onboarding-app .website-pill,
+.onboarding-app .website-line,
+.onboarding-app .website-rule,
+.onboarding-app .website-card-grid span {
+  position: relative;
+  overflow: hidden;
+  background: var(--gray-200);
+  border-radius: 999px;
+}
+
+.onboarding-app .website-pill::after,
+.onboarding-app .website-line::after,
+.onboarding-app .website-rule::after,
+.onboarding-app .website-card-grid span::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -9985,45 +10051,11 @@
   transform: translateX(-100%);
 }
 
-.onboarding-app .stage[data-step="2"] .bar::after {
-  animation: onboarding-shimmer 1.5s ease-in-out infinite;
-}
-
-.onboarding-app .bar.b1 {
-  width: 100%;
-  animation: onboarding-bar-in var(--dur-med) var(--ease-out) both;
-  animation-delay: 0.05s;
-}
-
-.onboarding-app .bar.b2 {
-  width: 78%;
-  animation: onboarding-bar-in var(--dur-med) var(--ease-out) both;
-  animation-delay: 0.16s;
-}
-
-.onboarding-app .bar.b3 {
-  width: 88%;
-  animation: onboarding-bar-in var(--dur-med) var(--ease-out) both;
-  animation-delay: 0.27s;
-}
-
-.onboarding-app .bar.b4 {
-  width: 55%;
-  animation: onboarding-bar-in var(--dur-med) var(--ease-out) both;
-  animation-delay: 0.38s;
-}
-
-@keyframes onboarding-bar-in {
-  from {
-    opacity: 0;
-    transform: scaleX(0);
-    transform-origin: left;
-  }
-
-  to {
-    opacity: 1;
-    transform: scaleX(1);
-  }
+.onboarding-app .stage[data-step="2"] .website-pill::after,
+.onboarding-app .stage[data-step="2"] .website-line::after,
+.onboarding-app .stage[data-step="2"] .website-rule::after,
+.onboarding-app .stage[data-step="2"] .website-card-grid span::after {
+  animation: onboarding-shimmer 1.6s ease-in-out infinite;
 }
 
 @keyframes onboarding-shimmer {
@@ -10032,11 +10064,70 @@
   }
 }
 
-.onboarding-app .layer-done {
+.onboarding-app .website-pill {
+  width: 30px;
+  height: 6px;
+}
+
+.onboarding-app .website-pill.is-left {
+  margin-right: auto;
+  width: 38px;
+  height: 11px;
+  border-radius: 6px;
+  background: var(--gray-300);
+}
+
+.onboarding-app .website-center-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 8px;
+  padding: 27px 18px 0;
+}
+
+.onboarding-app .website-line {
+  width: 40%;
+  height: 12px;
+  background: var(--gray-300);
+}
+
+.onboarding-app .website-line.is-title-short {
+  width: 30%;
+}
+
+.onboarding-app .website-rule {
+  width: 55%;
+  height: 6px;
+  margin-top: 12px;
+}
+
+.onboarding-app .website-rule.is-short {
+  width: 43%;
+  height: 5px;
+  margin-top: -3px;
+}
+
+.onboarding-app .website-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 12px;
+  padding: 34px 16px 0;
+}
+
+.onboarding-app .website-card-grid span {
+  min-height: 60px;
+  border-radius: 9px;
+  background: var(--paper-dim);
+  box-shadow: inset 0 0 0 1px rgba(10, 10, 10, 0.045);
+}
+
+.onboarding-app .layer-done {
+  position: relative;
+  inset: auto;
+  gap: 0;
   align-items: stretch;
   justify-content: flex-start;
-  padding: 14px;
+  padding: 10px;
 }
 
 .onboarding-app .stage[data-step="3"] .layer-done {
@@ -10049,7 +10140,7 @@
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
 }
 
 .onboarding-app .done-preview-shot {
@@ -10091,7 +10182,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 9px 10px;
+  padding: 8px 9px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--paper);
@@ -10148,20 +10239,21 @@
 
 .onboarding-app .badge-check {
   position: absolute;
-  top: -16px;
-  right: -16px;
-  width: 46px;
-  height: 46px;
+  top: -22px;
+  right: -22px;
+  z-index: 5;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--success-green);
+  border: 2px solid rgba(255, 255, 255, 0.95);
   border-radius: 50%;
-  background: var(--paper);
+  background: var(--success-green);
   box-shadow:
-    0 14px 28px -12px rgba(22, 163, 74, 0.7),
-    0 0 0 8px rgba(22, 163, 74, 0.12);
-  color: var(--success-green);
+    0 16px 34px -13px rgba(22, 163, 74, 0.76),
+    0 0 0 9px rgba(22, 163, 74, 0.14);
+  color: var(--paper);
   opacity: 0;
   transform: scale(0);
 }
@@ -10207,14 +10299,14 @@
   0%,
   100% {
     box-shadow:
-      0 14px 28px -12px rgba(22, 163, 74, 0.7),
-      0 0 0 8px rgba(22, 163, 74, 0.12);
+      0 16px 34px -13px rgba(22, 163, 74, 0.76),
+      0 0 0 9px rgba(22, 163, 74, 0.14);
   }
 
   50% {
     box-shadow:
-      0 18px 34px -14px rgba(22, 163, 74, 0.78),
-      0 0 0 13px rgba(22, 163, 74, 0.06);
+      0 20px 40px -15px rgba(22, 163, 74, 0.82),
+      0 0 0 15px rgba(22, 163, 74, 0.07);
   }
 }
 
@@ -10716,22 +10808,18 @@
   margin-top: 4px;
 }
 
-@media (min-width: 1400px) {
-  .onboarding-app {
-    --stage-success-window-h: auto;
-  }
-}
-
 @media (min-width: 881px) and (max-width: 1200px) {
   .onboarding-app {
     --stage-window-w: 386px;
     --stage-scene-w: 470px;
-    --stage-success-window-h: 318px;
   }
 
   .onboarding-app .layer-done {
+    padding: 8px;
+  }
+
+  .onboarding-app .done-preview {
     gap: 6px;
-    padding: 10px;
   }
 }
 
@@ -10739,7 +10827,6 @@
   .onboarding-app {
     --stage-window-w: 320px;
     --stage-scene-w: 368px;
-    --stage-success-window-h: 282px;
   }
 
   .onboarding-app.onboarding-shell {
@@ -10776,8 +10863,11 @@
   }
 
   .onboarding-app .layer-done {
+    padding: 8px;
+  }
+
+  .onboarding-app .done-preview {
     gap: 6px;
-    padding: 10px;
   }
 
   .onboarding-app h1 {
@@ -10803,7 +10893,6 @@
   .onboarding-app {
     --stage-window-w: 320px;
     --stage-scene-w: 372px;
-    --stage-success-window-h: 282px;
   }
 
   .onboarding-app.onboarding-shell {
@@ -10829,8 +10918,11 @@
   }
 
   .onboarding-app .layer-done {
+    padding: 8px;
+  }
+
+  .onboarding-app .done-preview {
     gap: 6px;
-    padding: 10px;
   }
 }
 
@@ -10838,7 +10930,6 @@
   .onboarding-app {
     --stage-window-w: 292px;
     --stage-scene-w: 336px;
-    --stage-success-window-h: 260px;
   }
 
   .onboarding-app h1 {
