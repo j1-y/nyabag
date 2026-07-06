@@ -6,7 +6,6 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 ;
 import { deleteBookmark, getProcessingBookmarks, refreshBookmarkScreenshot, retryBookmarkProcessing } from "@/lib/actions";
-import { processBookmarkSemanticData } from "@/lib/semantic/actions";
 import { getDomain } from "@/lib/data";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import type { Bookmark } from "@/lib/types";
@@ -22,9 +21,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
   const [isPending, startTransition] = useTransition();
   const [isRefreshing, startRefreshTransition] = useTransition();
   const [isRetrying, startRetryTransition] = useTransition();
-  const [isMemoryRetrying, startMemoryTransition] = useTransition();
   const [refreshError, setRefreshError] = useState("");
-  const [memoryError, setMemoryError] = useState("");
   const domain = getDomain(currentBookmark.url);
   const displayScreenshot = getBookmarkDisplayScreenshot(currentBookmark);
   const aiMetadata =
@@ -62,19 +59,6 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
         router.refresh();
       } else {
         setRefreshError(result.error);
-      }
-    });
-  }
-
-  function handleRetryMemory() {
-    setMemoryError("");
-    startMemoryTransition(async () => {
-      const result = await processBookmarkSemanticData(currentBookmark.id);
-      if (result.success) {
-        setCurrentBookmark((current) => ({ ...current, ...result.data }));
-        router.refresh();
-      } else {
-        setMemoryError(result.error);
       }
     });
   }
@@ -158,7 +142,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
               </p>
             ) : (
               <p className="detail-memory-description">
-                Nyabag will use this save&apos;s title, tags, notes, colors, fonts, and AI design read for memory search.
+                Nyabag sends new saves to Cortex so active search can rank bookmarks by design intent.
               </p>
             )}
             <div className="detail-chip-list">
@@ -170,19 +154,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
                 ? currentBookmark.ai_tags
                 : aiMetadata?.suggested_tags ?? []
               ).slice(0, 8).map((tag) => <span key={`ai-tag-${tag}`}>{tag}</span>)}
-              {currentBookmark.semantic_status && <span>{currentBookmark.semantic_status}</span>}
             </div>
-            {(currentBookmark.semantic_status === "failed" || currentBookmark.semantic_status === "skipped") && (
-              <Button className="detail-action-btn" variant="outline" onClick={handleRetryMemory} disabled={isMemoryRetrying}>
-                {isMemoryRetrying ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <HugeIcon icon={IconRefresh} />}
-                {isMemoryRetrying ? "Retrying..." : "Retry memory processing"}
-              </Button>
-            )}
-            {(memoryError || currentBookmark.semantic_error) && (
-              <p className="detail-refresh-error" role="status">
-                {memoryError || currentBookmark.semantic_error}
-              </p>
-            )}
           </div>
 
           <div className="detail-section">

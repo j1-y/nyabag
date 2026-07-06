@@ -23,7 +23,7 @@ const PROCESSING_NOTICE_MS = 20_000;
 const taskRows = [
   "Saving link",
   "Starting visual preview",
-  "Preparing search details",
+  "Sending to Cortex",
   "Opening your workspace",
 ];
 
@@ -78,7 +78,6 @@ function previewFromBookmark(bookmark: Bookmark): OnboardingBookmarkPreview {
     processing_error: bookmark.processing_error,
     metadata_refreshed_at: bookmark.metadata_refreshed_at,
     screenshot_refreshed_at: bookmark.screenshot_refreshed_at,
-    semantic_status: bookmark.semantic_status,
     updated_at: bookmark.updated_at,
   };
 }

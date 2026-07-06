@@ -12,14 +12,22 @@ import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import { removeBookmarkScreenshot } from "@/lib/bookmarks/storage";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
-import { processBookmarkSemanticData } from "@/lib/semantic/actions";
+import { ingestBookmarkToCortex, isCortexConfigured, searchCortex, type CortexSearchResult } from "@/lib/cortex";
 import { timeAsync } from "@/lib/perf";
 import { PROFILE_AVATAR_BUCKET } from "@/lib/profile";
 import { getTelegramBotUrl, isTelegramConfigured } from "@/lib/telegram/config";
 import { generateVerificationCode, hashVerificationCode } from "@/lib/telegram/verify";
 import { bookmarkCreateSchema, bookmarkUpdateSchema, profileUpdateSchema } from "@/lib/validations";
 import { extractUrlsFromText } from "@/lib/url-extraction";
-import type { ActionResult, Bookmark, BookmarkAiMetadata, ImportBookmarksResult, TelegramConnection, UserProfile } from "@/lib/types";
+import type {
+  ActionResult,
+  Bookmark,
+  BookmarkAiMetadata,
+  CortexBookmarkSearchPayload,
+  ImportBookmarksResult,
+  TelegramConnection,
+  UserProfile,
+} from "@/lib/types";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 const AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -93,6 +101,51 @@ function mergeBookmarkTags(existing: string[], suggested: string[]) {
 function getShortError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   return message.slice(0, 500);
+}
+
+function getCortexBookmarkId(result: CortexSearchResult) {
+  const id = result.nyabagBookmarkId?.trim();
+  return id || null;
+}
+
+function uniqueCortexBookmarkIds(results: CortexSearchResult[]) {
+  const seen = new Set<string>();
+  const ids: string[] = [];
+
+  for (const result of results) {
+    const id = getCortexBookmarkId(result);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+
+  return ids;
+}
+
+function filterCortexRowsForUser(results: CortexSearchResult[], userId: string) {
+  let dropped = 0;
+  const rows = results.filter((result) => {
+    const resultUserId = result.userId?.trim();
+    if (!resultUserId || resultUserId === userId) return true;
+    dropped += 1;
+    return false;
+  });
+
+  if (dropped > 0) {
+    console.warn("[cortex] Dropped cross-user search results before Supabase owner filtering.", { dropped });
+  }
+
+  return rows;
+}
+
+function getCortexSearchReasons(result: CortexSearchResult) {
+  const reasons = [
+    result.contentPreview?.trim(),
+    result.visualPreview?.trim(),
+    ...(result.autoTags ?? []).slice(0, 2).map((tag) => `Tag: ${tag}`),
+  ].filter((reason): reason is string => Boolean(reason));
+
+  return reasons.slice(0, 3);
 }
 
 async function enrichBookmarkWithAIScoped({
@@ -281,9 +334,6 @@ async function createBookmarkForUser({
       processing_error: null,
       enrichment_started_at: null,
       enrichment_finished_at: null,
-      semantic_status: "pending",
-      semantic_error: null,
-      semantic_processed_at: null,
       folder_id: folder_id ?? null,
     })
     .select()
@@ -293,6 +343,15 @@ async function createBookmarkForUser({
 
   const job = await enqueueBookmarkProcessingJob(supabase, id, userId, url);
   if (!job.success) return { success: false, error: job.error };
+
+  await ingestBookmarkToCortex({
+    nyabagBookmarkId: data.id,
+    userId,
+    url: data.url,
+    title: data.title,
+    summary: data.summary,
+    screenshotUrl: data.screenshot_url,
+  });
 
   await triggerProcessorBestEffort("createBookmarkForUser");
 
@@ -388,6 +447,116 @@ export async function createBookmark(
 
     return result;
   });
+}
+
+export async function searchCortexBookmarks(
+  query: string,
+  limit = 20
+): Promise<ActionResult<CortexBookmarkSearchPayload>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Not authenticated" };
+  }
+
+  const trimmed = query.replace(/\s+/g, " ").trim().slice(0, 500);
+  const safeLimit = Math.max(1, Math.min(50, Math.floor(limit)));
+
+  if (!trimmed) {
+    return {
+      success: true,
+      data: {
+        bookmarks: [],
+        query: "",
+        result_count: 0,
+        configured: isCortexConfigured(),
+      },
+    };
+  }
+
+  if (!isCortexConfigured()) {
+    return { success: false, error: "Cortex search unavailable" };
+  }
+
+  const cortexResults = await searchCortex({
+    query: trimmed,
+    userId: user.id,
+    limit: safeLimit,
+  });
+  if (!cortexResults) {
+    return { success: false, error: "Cortex search unavailable" };
+  }
+
+  const cortexRows = filterCortexRowsForUser(cortexResults.results ?? [], user.id);
+  const orderedIds = uniqueCortexBookmarkIds(cortexRows);
+
+  if (orderedIds.length === 0) {
+    return {
+      success: true,
+      data: {
+        bookmarks: [],
+        query: cortexResults.query ?? trimmed,
+        result_count: 0,
+        configured: true,
+        message: "No Cortex matches found.",
+      },
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("bookmarks")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("id", orderedIds);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  const bookmarks = await attachAiMetadataToBookmarks(supabase, (data ?? []) as Bookmark[], user.id);
+  const bookmarkById = new Map(bookmarks.map((bookmark) => [bookmark.id, bookmark]));
+  const resultById = new Map<string, CortexSearchResult>();
+
+  cortexRows.forEach((result) => {
+    const id = getCortexBookmarkId(result);
+    if (id && !resultById.has(id)) resultById.set(id, result);
+  });
+
+  const orderedBookmarks = orderedIds
+    .map((id, index) => {
+      const bookmark = bookmarkById.get(id);
+      const result = resultById.get(id);
+      if (!bookmark || !result) return null;
+
+      const similarity = typeof result.similarity === "number" ? result.similarity : undefined;
+      const fallbackScore = 1 - index / Math.max(orderedIds.length, 1);
+
+      const enrichedBookmark: Bookmark = {
+        ...bookmark,
+        search_score: similarity ?? fallbackScore,
+        search_mode: "cortex" as const,
+        search_match_reasons: getCortexSearchReasons(result),
+        semantic_similarity: similarity,
+        match_label: "Cortex match",
+        match_strength: similarity !== undefined && similarity >= 0.75 ? "strong" : "related",
+      };
+
+      return enrichedBookmark;
+    })
+    .filter((bookmark): bookmark is Bookmark => Boolean(bookmark));
+
+  return {
+    success: true,
+    data: {
+      bookmarks: orderedBookmarks,
+      query: cortexResults.query ?? trimmed,
+      result_count: orderedBookmarks.length,
+      configured: true,
+    },
+  };
 }
 
 export async function enrichBookmarkWithAI(
@@ -716,9 +885,6 @@ export async function updateBookmark(
     processing_error: urlChanged ? null : undefined,
     enrichment_started_at: urlChanged ? null : undefined,
     enrichment_finished_at: urlChanged ? null : undefined,
-    semantic_status: "pending",
-    semantic_error: null,
-    semantic_processed_at: null,
   };
 
   // Only include folder_id in update if it was explicitly provided in form
@@ -747,13 +913,6 @@ export async function updateBookmark(
     const job = await enqueueBookmarkProcessingJob(supabase, id, user.id, url);
     if (!job.success) return { success: false, error: job.error };
     await triggerProcessorBestEffort("updateBookmark");
-  } else {
-    await processBookmarkSemanticData(id).catch((error) => {
-      console.warn(
-        "[updateBookmark] Memory refresh failed:",
-        error instanceof Error ? error.message : error
-      );
-    });
   }
 
   revalidatePath("/");
@@ -813,9 +972,6 @@ export async function refreshBookmarkScreenshot(
       processing_error: null,
       enrichment_started_at: null,
       enrichment_finished_at: null,
-      semantic_status: "pending",
-      semantic_error: null,
-      semantic_processed_at: null,
     })
     .eq("id", id)
     .eq("user_id", user.id)
@@ -906,9 +1062,6 @@ export async function retryBookmarkProcessing(
       processing_error: null,
       enrichment_started_at: null,
       enrichment_finished_at: null,
-      semantic_status: "pending",
-      semantic_error: null,
-      semantic_processed_at: null,
     })
     .eq("id", id)
     .eq("user_id", user.id)

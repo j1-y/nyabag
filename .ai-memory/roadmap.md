@@ -3,13 +3,13 @@
 ## Near term
 
 - Keep the bookmark, folder, canvas, capture, profile, and onboarding surfaces aligned with the canonical architecture doc.
-- Maintain the hybrid semantic and visual memory pipeline without breaking fallback behavior.
+- Keep Cortex-backed active search reliable, observable, and clearly separated from Supabase-owned bookmark rows.
 - Keep the canvas stable as note, media, and section behavior evolves.
 - Improve documentation coverage as the repo grows.
 
 ## In progress themes
 
-- Search quality, search evaluation fixtures, and evidence-backed retrieval.
+- Cortex search quality, unavailable-state handling, and stale-ID cleanup planning.
 - Processor reliability and job provenance.
 - Canvas media handling and hot-save correctness.
 - App-only deployment clarity for `app.nyabag.com`.
@@ -17,10 +17,10 @@
 
 ## Likely future work
 
-- Search quality tuning with real-user feedback and larger evaluation sets.
+- Cortex search quality tuning with real-user feedback and hosted-service observability.
 - Browser extension polish and sync flow improvements.
 - Figma integration or design-system export pathways.
-- Richer AI search and evidence surfacing.
+- Richer Cortex evidence surfacing.
 - Better monitoring for screenshot, enrichment, and storage failures.
 - Reintroduce a separate marketing/content deployment only if product direction requires it.
 

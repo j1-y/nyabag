@@ -12,18 +12,20 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react";
-import { BOOKMARK_SEARCH_CONFIG } from "@/lib/bookmark-search/config";
-import type { BookmarkSearchMode, BookmarkSearchResult, SearchState } from "@/lib/bookmark-search/types";
-import type { TemporalFilter } from "@/lib/bookmark-search/temporal-query";
-import type { Bookmark } from "@/lib/types";
-import { deleteBookmark, getBookmarks, getProcessingBookmarks } from "@/lib/actions";
-import { searchBookmarksByMemory } from "@/lib/semantic/actions";
+import type { Bookmark, CortexBookmarkSearchPayload } from "@/lib/types";
+import { deleteBookmark, getBookmarks, getProcessingBookmarks, searchCortexBookmarks } from "@/lib/actions";
 
 export type PendingBookmark = {
   id: string;
   title: string;
   url: string;
 };
+
+type CortexSearchState =
+  | { status: "idle"; query: "" }
+  | { status: "loading"; query: string; previousResults: Bookmark[] }
+  | { status: "success"; query: string; payload: CortexBookmarkSearchPayload }
+  | { status: "error"; query: string; message: string; previousResults: Bookmark[] };
 
 interface BookmarksCtx {
   bookmarks: Bookmark[];
@@ -37,15 +39,13 @@ interface BookmarksCtx {
   setActiveFilter: (f: "all" | "recent") => void;
   search: string;
   setSearch: (s: string) => void;
-  isSemanticSearching: boolean;
-  semanticError: string;
-  semanticHasRun: boolean;
-  searchMode: BookmarkSearchMode;
+  isSearchLoading: boolean;
+  searchError: string;
+  searchHasRun: boolean;
+  isCortexSearchActive: boolean;
+  isCortexUnavailable: boolean;
   searchResultCount: number;
-  temporalFilter?: Omit<TemporalFilter, "sourceText">;
-  effectiveSearchQuery: string;
   clearSearch: () => void;
-  // Modal state
   addOpen: boolean;
   openAdd: () => void;
   closeAdd: () => void;
@@ -59,7 +59,6 @@ interface BookmarksCtx {
   openDetail: (b: Bookmark) => void;
   closeDetail: () => void;
   deleteItem: (id: string) => void;
-  // Derived
   filtered: Bookmark[];
 }
 
@@ -67,18 +66,13 @@ const Ctx = createContext<BookmarksCtx | null>(null);
 
 const DASHBOARD_REFRESH_INTERVAL_MS = 15_000;
 const DASHBOARD_FOCUS_REFRESH_MIN_MS = 5_000;
+const CORTEX_SEARCH_MIN_QUERY_LENGTH = 2;
+const CORTEX_SEARCH_DEBOUNCE_MS = 400;
 
-function getPreviousSearchResults(state: SearchState): BookmarkSearchResult[] {
+function getPreviousSearchResults(state: CortexSearchState): Bookmark[] {
   if (state.status === "success") return state.payload.bookmarks;
   if (state.status === "loading" || state.status === "error") return state.previousResults;
   return [];
-}
-
-function getBrowserSearchContext() {
-  if (typeof window === "undefined") return { timeZone: "UTC", locale: "en-US" };
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
-  const locale = navigator.language || "en-US";
-  return { timeZone, locale };
 }
 
 function getBookmarkSnapshot(bookmarks: Bookmark[]) {
@@ -87,7 +81,6 @@ function getBookmarkSnapshot(bookmarks: Bookmark[]) {
       bookmark.id,
       bookmark.updated_at,
       bookmark.processing_status,
-      bookmark.semantic_status ?? "",
       bookmark.screenshot_url ?? "",
       bookmark.long_screenshot_url ?? "",
       bookmark.ai_metadata?.updated_at ?? "",
@@ -115,7 +108,7 @@ export function BookmarksProvider({
     }
   });
   const [search, setSearch] = useState("");
-  const [searchState, setSearchState] = useState<SearchState>({ status: "idle", query: "" });
+  const [searchState, setSearchState] = useState<CortexSearchState>({ status: "idle", query: "" });
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Bookmark | null>(null);
@@ -135,8 +128,7 @@ export function BookmarksProvider({
 
   const hasActiveProcessing = bookmarks.some((bookmark) =>
     bookmark.processing_status === "queued" ||
-    bookmark.processing_status === "processing" ||
-    bookmark.semantic_status === "processing"
+    bookmark.processing_status === "processing"
   );
 
   const refreshBookmarks = useCallback(async () => {
@@ -199,8 +191,7 @@ export function BookmarksProvider({
         setBookmarks(result.data);
         stillProcessing = result.data.some((bookmark) =>
           bookmark.processing_status === "queued" ||
-          bookmark.processing_status === "processing" ||
-          bookmark.semantic_status === "processing"
+          bookmark.processing_status === "processing"
         );
       }
 
@@ -220,7 +211,7 @@ export function BookmarksProvider({
 
   useEffect(() => {
     const q = search.trim();
-    if (q.length < BOOKMARK_SEARCH_CONFIG.minQueryLength) {
+    if (q.length < CORTEX_SEARCH_MIN_QUERY_LENGTH) {
       searchRequestIdRef.current += 1;
       const timeout = window.setTimeout(() => {
         setSearchState({ status: "idle", query: "" });
@@ -238,8 +229,7 @@ export function BookmarksProvider({
         previousResults: getPreviousSearchResults(current),
       }));
 
-      const searchContext = getBrowserSearchContext();
-      const result = await searchBookmarksByMemory(q, searchContext);
+      const result = await searchCortexBookmarks(q, 20);
       if (searchRequestIdRef.current !== requestId) return;
 
       if (!result.success) {
@@ -253,7 +243,7 @@ export function BookmarksProvider({
       }
 
       setSearchState({ status: "success", query: q, payload: result.data });
-    }, BOOKMARK_SEARCH_CONFIG.debounceMs);
+    }, CORTEX_SEARCH_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeout);
@@ -261,26 +251,22 @@ export function BookmarksProvider({
   }, [search]);
 
   const deleteItem = useCallback(async (id: string) => {
-    // Keep reference to previous state for rollback
     const previousBookmarks = bookmarks;
-    
-    // Optimistic UI update
+
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
     if (detailTarget?.id === id) setDetailTarget(null);
     if (editTarget?.id === id) setEditTarget(null);
-    
+
     try {
       const result = await deleteBookmark(id);
       if (!result.success) {
         console.error("Delete failed:", result.error);
         alert(`Failed to delete bookmark: ${result.error}`);
-        // Revert optimistic update
         setBookmarks(previousBookmarks);
       }
     } catch (error) {
       console.error("Delete error:", error);
       alert("An unexpected error occurred while deleting the bookmark.");
-      // Revert optimistic update
       setBookmarks(previousBookmarks);
     }
   }, [bookmarks, detailTarget?.id, editTarget?.id]);
@@ -313,29 +299,22 @@ export function BookmarksProvider({
     const q = search.trim();
     let list: Bookmark[] = [...bookmarks];
 
-    if (q.length >= BOOKMARK_SEARCH_CONFIG.minQueryLength) {
+    if (q.length >= CORTEX_SEARCH_MIN_QUERY_LENGTH) {
       const refreshedById = new Map(bookmarks.map((bookmark) => [bookmark.id, bookmark]));
 
       list = rankedSearchResults
         .map((result) => {
-          const refreshed = refreshedById.get(result.id);
-          if (!refreshed) return null;
+          const refreshed = refreshedById.get(result.id) ?? result;
           return {
             ...refreshed,
             search_score: result.search_score,
             search_mode: result.search_mode,
             search_match_reasons: result.search_match_reasons,
-            lexical_score: result.lexical_score,
-            exact_match_score: result.exact_match_score,
             semantic_similarity: result.semantic_similarity,
-            semantic_match_reasons: result.semantic_match_reasons,
             match_label: result.match_label,
             match_strength: result.match_strength,
-            visual_match_evidence: result.visual_match_evidence,
-            visual_score_breakdown: result.visual_score_breakdown,
-          } satisfies BookmarkSearchResult;
-        })
-        .filter(Boolean) as Bookmark[];
+          };
+        });
     }
 
     if (activeTag !== "All") list = list.filter((b) => b.tags.includes(activeTag));
@@ -343,18 +322,18 @@ export function BookmarksProvider({
     return list;
   }, [activeFilter, activeTag, bookmarks, rankedSearchResults, search]);
 
-  const isSemanticSearching = searchState.status === "loading";
-  const semanticHasRun = searchState.status === "success" || searchState.status === "error";
-  const semanticError =
+  const activeQuery = search.trim().length >= CORTEX_SEARCH_MIN_QUERY_LENGTH;
+  const isSearchLoading = searchState.status === "loading";
+  const searchHasRun = searchState.status === "success" || searchState.status === "error";
+  const isCortexSearchActive = searchState.status === "success" && activeQuery && searchState.payload.configured;
+  const isCortexUnavailable = searchState.status === "error" && activeQuery;
+  const searchError =
     searchState.status === "error"
       ? searchState.message
       : searchState.status === "success"
         ? searchState.payload.message ?? ""
         : "";
-  const searchMode = searchState.status === "success" ? searchState.payload.mode : "keyword";
   const searchResultCount = searchState.status === "success" ? searchState.payload.result_count : filtered.length;
-  const temporalFilter = searchState.status === "success" ? searchState.payload.temporalFilter : undefined;
-  const effectiveSearchQuery = searchState.status === "success" ? searchState.payload.effectiveQuery : search.trim();
 
   const value = useMemo<BookmarksCtx>(
     () => ({
@@ -365,13 +344,12 @@ export function BookmarksProvider({
       activeTag, setActiveTag,
       activeFilter, setActiveFilter: setPersistentActiveFilter,
       search, setSearch,
-      isSemanticSearching,
-      semanticError,
-      semanticHasRun,
-      searchMode,
+      isSearchLoading,
+      searchError,
+      searchHasRun,
+      isCortexSearchActive,
+      isCortexUnavailable,
       searchResultCount,
-      temporalFilter,
-      effectiveSearchQuery,
       clearSearch,
       addOpen,
       openAdd,
@@ -404,6 +382,9 @@ export function BookmarksProvider({
       editTarget,
       filtered,
       importOpen,
+      isCortexSearchActive,
+      isCortexUnavailable,
+      isSearchLoading,
       openAdd,
       openDetail,
       openEdit,
@@ -411,13 +392,9 @@ export function BookmarksProvider({
       pendingBookmarks,
       removePendingBookmark,
       search,
-      searchMode,
+      searchError,
+      searchHasRun,
       searchResultCount,
-      temporalFilter,
-      effectiveSearchQuery,
-      semanticError,
-      semanticHasRun,
-      isSemanticSearching,
       setPersistentActiveFilter,
     ]
   );

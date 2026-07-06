@@ -92,9 +92,6 @@ export async function POST(request: NextRequest) {
       screenshot_url: screenshotUrl,
       screenshot_refreshed_at: new Date().toISOString(),
       processing_status: "ready",
-      semantic_status: "pending",
-      semantic_error: null,
-      semantic_processed_at: null,
     })
     .eq("id", bookmarkId)
     .eq("user_id", auth.user.id);

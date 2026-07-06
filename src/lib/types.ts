@@ -1,5 +1,3 @@
-import type { VisualSearchResultFields } from "@/lib/visual-memory/types";
-
 export type BookmarkFolder = {
   id: string;
   user_id: string;
@@ -19,7 +17,7 @@ export type BookmarkFolderTreeNode = BookmarkFolder & {
   recursive_bookmark_count?: number;
 };
 
-export type Bookmark = VisualSearchResultFields & {
+export type Bookmark = {
   id: string;
   user_id: string;
   url: string;
@@ -44,17 +42,13 @@ export type Bookmark = VisualSearchResultFields & {
   ai_tags?: string[];
   ai_patterns?: string[];
   save_reason?: string | null;
-  semantic_status?: "pending" | "processing" | "ready" | "failed" | "skipped";
-  semantic_error?: string | null;
-  semantic_processed_at?: string | null;
   last_opened_at?: string | null;
   search_score?: number;
-  search_mode?: "exact" | "hybrid" | "keyword" | "semantic" | "temporal";
+  search_mode?: "cortex";
   search_match_reasons?: string[];
-  lexical_score?: number;
-  exact_match_score?: number;
   semantic_similarity?: number;
-  semantic_match_reasons?: string[];
+  match_label?: string;
+  match_strength?: "exact" | "strong" | "possible" | "related";
   created_at: string;
   updated_at: string;
   folder_id?: string | null;
@@ -149,6 +143,14 @@ export type ImportBookmarksResult = {
   failed: ImportBookmarkItemResult[];
   skipped: ImportBookmarkItemResult[];
   total: number;
+};
+
+export type CortexBookmarkSearchPayload = {
+  bookmarks: Bookmark[];
+  query: string;
+  result_count: number;
+  configured: boolean;
+  message?: string;
 };
 
 export type UserProfile = {

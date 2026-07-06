@@ -111,9 +111,6 @@ export async function enrichBookmark(
         processing_status: "ready",
         processing_error: null,
         enrichment_finished_at: new Date().toISOString(),
-        semantic_status: "pending",
-        semantic_error: null,
-        semantic_processed_at: null,
       };
 
       if (finalTitle) updates.title = finalTitle;

@@ -9,9 +9,7 @@ import {
   extractPaletteFromImage,
   upsertAiFailed,
 } from "./bookmark-ai.mjs";
-import { EMBEDDING_MODEL, processBookmarkSemanticMemory } from "./semantic-memory.mjs";
 import { enrichVisualFactsWithAi, extractVisualFacts, mergeVisualFacts, upsertVisualFacts } from "./visual-facts.mjs";
-import { upsertVisualMemoryChunks } from "./visual-memory.mjs";
 
 const BUCKET = "bookmark-screenshots";
 
@@ -940,9 +938,7 @@ async function processJob(supabase, browser, job, config) {
     return;
   }
 
-  let visualFactsRow = null;
-  let bookmarkForMemory = null;
-  let aiMetadataForMemory = null;
+  let bookmarkForVisualFacts = null;
 
   try {
     const { data: bookmarkForAi, error: bookmarkForAiError } = await supabase
@@ -960,7 +956,7 @@ async function processJob(supabase, browser, job, config) {
       throw new Error("Bookmark disappeared before AI analysis");
     }
 
-    bookmarkForMemory = bookmarkForAi;
+    bookmarkForVisualFacts = bookmarkForAi;
 
     const aiMetadata = await analyzeBookmarkScreenshot({
       supabase,
@@ -969,8 +965,6 @@ async function processJob(supabase, browser, job, config) {
       screenshot: longCapture.webp,
       observed: longCapture.observed,
     });
-
-    aiMetadataForMemory = aiMetadata;
 
     if (aiMetadata?.suggested_tags?.length) {
       const { data: bookmarkTags } = await supabase
@@ -997,35 +991,25 @@ async function processJob(supabase, browser, job, config) {
   }
 
   try {
-    if (!bookmarkForMemory) {
-      const { data: bookmarkForVisualMemory, error: bookmarkForVisualMemoryError } = await supabase
+    if (!bookmarkForVisualFacts) {
+      const { data: bookmarkForVisualFactsResult, error: bookmarkForVisualFactsError } = await supabase
         .from("bookmarks")
         .select("*")
         .eq("id", job.bookmark_id)
         .eq("user_id", job.user_id)
         .maybeSingle();
 
-      if (bookmarkForVisualMemoryError) {
-        throw new Error(`Could not read bookmark for visual memory: ${bookmarkForVisualMemoryError.message}`);
+      if (bookmarkForVisualFactsError) {
+        throw new Error(`Could not read bookmark for visual facts: ${bookmarkForVisualFactsError.message}`);
       }
-      if (!bookmarkForVisualMemory) throw new Error("Bookmark disappeared before visual memory");
-      bookmarkForMemory = bookmarkForVisualMemory;
-    }
-
-    if (!aiMetadataForMemory) {
-      const { data: storedAiMetadata } = await supabase
-        .from("bookmark_ai_metadata")
-        .select("*")
-        .eq("bookmark_id", job.bookmark_id)
-        .eq("user_id", job.user_id)
-        .maybeSingle();
-      aiMetadataForMemory = storedAiMetadata;
+      if (!bookmarkForVisualFactsResult) throw new Error("Bookmark disappeared before visual facts");
+      bookmarkForVisualFacts = bookmarkForVisualFactsResult;
     }
 
     let aiVisualFacts = null;
     try {
       aiVisualFacts = await enrichVisualFactsWithAi({
-        bookmark: bookmarkForMemory,
+        bookmark: bookmarkForVisualFacts,
         screenshot: longCapture.webp,
         deterministic: longCapture.deterministicVisualFacts,
       });
@@ -1040,7 +1024,7 @@ async function processJob(supabase, browser, job, config) {
       longCapture.deterministicVisualFacts,
       aiVisualFacts
     );
-    visualFactsRow = await upsertVisualFacts(
+    await upsertVisualFacts(
       supabase,
       job,
       mergedVisualFacts,
@@ -1048,19 +1032,10 @@ async function processJob(supabase, browser, job, config) {
       aiVisualFacts
     );
 
-    const chunkResult = await upsertVisualMemoryChunks({
-      supabase,
-      bookmark: bookmarkForMemory,
-      aiMetadata: aiMetadataForMemory,
-      visualFacts: visualFactsRow,
-    });
-
-    console.log(
-      `[processor] visual memory chunks ${chunkResult.status}: ${job.id} (${chunkResult.chunks} chunks, ${chunkResult.embedded} embedded)`
-    );
+    console.log(`[processor] visual facts ready: ${job.id}`);
   } catch (error) {
     console.error(
-      `[processor] visual memory failed: ${job.id}`,
+      `[processor] visual facts failed: ${job.id}`,
       error instanceof Error ? error.message : error
     );
     await upsertVisualFacts(
@@ -1076,27 +1051,6 @@ async function processJob(supabase, browser, job, config) {
         upsertError instanceof Error ? upsertError.message : upsertError
       );
     });
-  }
-
-  try {
-    const semanticResult = await processBookmarkSemanticMemory({
-      supabase,
-      bookmarkId: job.bookmark_id,
-      userId: job.user_id,
-    });
-
-    if (semanticResult.status === "ready") {
-      console.log(`[processor] semantic memory ready: ${job.id}`);
-    } else if (semanticResult.status === "skipped") {
-      console.log(`[processor] semantic memory skipped: ${job.id}`);
-    } else {
-      console.warn(`[processor] semantic memory ${semanticResult.status}: ${semanticResult.error}`);
-    }
-  } catch (error) {
-    console.error(
-      `[processor] semantic memory failed unexpectedly: ${job.id}`,
-      error instanceof Error ? error.message : error
-    );
   }
 }
 
@@ -1200,13 +1154,12 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
     quality,
     geminiConfigured,
     geminiModel,
-    geminiEmbeddingModel: EMBEDDING_MODEL,
     workerId,
   });
 
   if (!geminiConfigured) {
     console.warn(
-      "[processor] Gemini is not configured; AI metadata and semantic memory will be skipped"
+      "[processor] Gemini is not configured; AI metadata will be skipped"
     );
   }
 

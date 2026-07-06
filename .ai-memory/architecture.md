@@ -32,9 +32,7 @@
 - Folder mutations: `src/lib/folder-actions.ts`
 - Onboarding mutations: `src/lib/onboarding-actions.ts`
 - Admin mutations: `src/lib/admin/actions.ts`
-- Semantic memory logic: `src/lib/semantic/*`
-- Bookmark search config/fusion/types: `src/lib/bookmark-search/*`
-- Visual memory logic: `src/lib/visual-memory/*`
+- Hosted Cortex client and active search boundary: `src/lib/cortex.ts`
 - Bookmark enrichment and processor dispatch: `src/lib/bookmarks/*`
 
 ## Storage and schema
@@ -47,20 +45,18 @@
 ## Processing pipeline
 
 - Bookmark creation inserts a row first, then triggers enrichment and processor work.
+- Bookmark creation also sends a best-effort server-only Cortex `/ingest` request when `CORTEX_API_URL` is configured; Cortex failures must not block creation.
 - The bookmark processor lives under `processor/*`.
-- Visual-memory backfill and evaluation helpers live under `scripts/*`.
-- Bookmark search reindexing lives in `scripts/reindex-bookmark-search.mjs`; fixture evaluation lives in `scripts/evaluate-bookmark-search.mjs`.
 - Screenshot and metadata enrichment are intentionally best-effort and must remain fallback-safe.
-- Bookmark processing captures two screenshots per URL job: a normal top-viewport WebP stored in `screenshot_url` for onboarding, then a long full-page WebP stored in `long_screenshot_url` for dashboard cards, folder cards, detail pages, AI metadata, and visual memory. App display falls back to `screenshot_url` when `long_screenshot_url` is missing.
+- Bookmark processing captures two screenshots per URL job: a normal top-viewport WebP stored in `screenshot_url` for onboarding, then a long full-page WebP stored in `long_screenshot_url` for dashboard cards, folder cards, detail pages, AI metadata, and visual facts. App display falls back to `screenshot_url` when `long_screenshot_url` is missing.
 
 ## Bookmark search architecture
 
-- Active dashboard searches must use server-ranked results from `searchBookmarksByMemory()`/`searchBookmarks()`, not broad client-side substring unions.
-- Temporal search is parsed deterministically in `src/lib/bookmark-search/temporal-query.ts`; date-only queries bypass Gemini and visual memory, while mixed date+content queries pass UTC bounds to every candidate source.
-- Lexical retrieval uses `bookmarks.search_vector`, `idx_bookmarks_search_vector`, and the `search_bookmarks_lexical` RPC in `supabase/schema.sql`.
-- Date-bound retrieval uses versioned `_v2` RPCs to avoid PostgREST overload ambiguity.
-- Semantic retrieval uses Gemini 768-dimensional embeddings in `bookmark_embeddings` with `retrieval_schema_version`.
-- Fusion and cutoff are pure TypeScript in `src/lib/bookmark-search/fusion.ts`.
+- Active dashboard searches must use Cortex via `searchCortexBookmarks()` in `src/lib/actions.ts`; do not reintroduce app-side lexical/Gemini/visual/fusion fallback for active queries.
+- Empty search still uses the loaded local bookmark list with tag and recent filters.
+- `CORTEX_API_URL` is server-only and required for active search. If missing or broken, the active search UI shows a Cortex-unavailable state.
+- Cortex returns ranked `nyabagBookmarkId` values only. Nyabag must owner-filter those IDs through Supabase and return bookmark rows in Cortex order.
+- Legacy Supabase search objects remain in `supabase/schema.sql` until a future explicit cleanup migration; treat them as inactive leftovers, not active app architecture.
 - Full operational details live in `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`.
 
 ## Important boundaries

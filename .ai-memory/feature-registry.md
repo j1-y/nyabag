@@ -3,17 +3,17 @@
 ## Bookmarks
 
 - Feature: Bookmark dashboard
-- Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
-- Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
-- Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, normal onboarding screenshot plus long app screenshot enrichment, optional processor jobs
+- Description: Main saved-inspiration workspace with cards, filtering, pending creation, Cortex-backed active search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
+- Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/cortex.ts`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
+- Dependencies: Supabase auth, bookmark tables, hosted Cortex, normal onboarding screenshot plus long app screenshot enrichment, optional processor jobs
 - Status: Active
 
 ## Bookmark Search
 
-- Feature: Ranked hybrid bookmark search
-- Description: Server-ranked search over weighted lexical matches, Gemini retrieval embeddings, optional visual-memory evidence, and deterministic timezone-aware temporal filters. Active dashboard searches do not union broad local substring matches.
-- Key Files: `src/lib/bookmark-search/*`, `src/lib/semantic/actions.ts`, `src/lib/semantic/memory-text.ts`, `src/lib/semantic/embeddings.ts`, `src/hooks/useBookmarks.tsx`, `src/components/bookmarks/BookmarkSearchBar.tsx`, `src/components/bookmarks/BookmarkGrid.tsx`, `scripts/reindex-bookmark-search.mjs`, `scripts/evaluate-bookmark-search.mjs`, `scripts/evaluate-temporal-search.ts`, `tests/bookmark-search-fixtures.json`, `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`, `supabase/schema.sql`
-- Dependencies: Supabase RLS, `search_bookmarks_lexical_v2`, date-bound vector/chunk RPCs, `bookmarks.search_vector`, `bookmark_embeddings.retrieval_schema_version`, pgvector 768, Gemini embeddings, Luxon timezone handling, optional visual memory chunks/facts
+- Feature: Cortex bookmark search
+- Description: Active bookmark search calls hosted Cortex, owner-filters returned `nyabagBookmarkId` values through Supabase, and returns cards in Cortex order. Empty search remains the local bookmark list with tag/recent filters.
+- Key Files: `src/lib/cortex.ts`, `src/lib/actions.ts`, `src/hooks/useBookmarks.tsx`, `src/components/bookmarks/BookmarkSearchBar.tsx`, `src/components/bookmarks/BookmarkGrid.tsx`, `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`, `supabase/schema.sql`
+- Dependencies: Supabase RLS, server-only `CORTEX_API_URL`, Cortex `/ingest` and `/search`
 - Status: Active
 
 ## Canvas
@@ -35,7 +35,7 @@
 ## Profile
 
 - Feature: Profile settings
-- Description: User profile editor with avatar upload plus semantic and Telegram-related panels.
+- Description: User profile editor with avatar upload plus Telegram-related panels.
 - Key Files: `src/app/(dashboard)/profile/page.tsx`, `src/components/profile/*`, `src/lib/profile.ts`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, `profile-avatars` storage bucket
 - Status: Active
@@ -92,5 +92,5 @@
 
 - Browser Extension
 - Figma Integration
-- Better visual-memory ranking
+- Cortex search observability and stale-ID cleanup tools
 - More robust processor observability

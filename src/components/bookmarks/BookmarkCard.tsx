@@ -57,23 +57,13 @@ function BookmarkCardComponent({
     bookmark.ai_metadata?.status === "completed" && bookmark.ai_metadata.page_type
       ? bookmark.ai_metadata.page_type
       : "";
-  const isMemoryMatch = typeof bookmark.search_score === "number" || typeof bookmark.semantic_similarity === "number";
-  const isMemoryPreparing =
-    bookmark.semantic_status === "pending" || bookmark.semantic_status === "processing";
-  const memoryLabel = bookmark.match_label ?? (isMemoryMatch ? "Related" : "Preparing memory");
-  const memoryChipClass = bookmark.match_strength ? `is-${bookmark.match_strength}` : isMemoryMatch ? "is-related" : "is-preparing";
-  const evidenceLabels = (
-    bookmark.search_match_reasons?.length
-      ? bookmark.search_match_reasons
-      : bookmark.visual_match_evidence?.length
-        ? bookmark.visual_match_evidence.map((item) => item.label)
-        : bookmark.semantic_match_reasons ?? []
-  ).filter(Boolean).slice(0, 3);
-  const evidenceTitle = bookmark.visual_match_evidence?.length
-    ? `Matched because Nyabag detected ${bookmark.visual_match_evidence.map((item) => item.label.toLowerCase()).join(", ")}.`
-    : evidenceLabels.length
-      ? `Related memory evidence: ${evidenceLabels.join(", ")}.`
-      : undefined;
+  const isCortexMatch = bookmark.search_mode === "cortex" || typeof bookmark.search_score === "number";
+  const memoryLabel = bookmark.match_label ?? "Cortex match";
+  const memoryChipClass = bookmark.match_strength ? `is-${bookmark.match_strength}` : "is-related";
+  const evidenceLabels = (bookmark.search_match_reasons ?? []).filter(Boolean).slice(0, 3);
+  const evidenceTitle = evidenceLabels.length
+    ? `Cortex match evidence: ${evidenceLabels.join(", ")}.`
+    : undefined;
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -228,9 +218,9 @@ function BookmarkCardComponent({
             />
           )}
 
-          {(isMemoryMatch || isMemoryPreparing || bookmark.match_label) && (
+          {(isCortexMatch || bookmark.match_label) && (
             <div className={`bookmark-memory-chip ${memoryChipClass}`} title={evidenceTitle}>
-              {isMemoryPreparing && !bookmark.match_label ? <HugeIcon icon={IconLoader} size={18} /> : <HugeIcon icon={IconSparkles} size={18} />}
+              <HugeIcon icon={IconSparkles} size={18} />
               <span>{memoryLabel}</span>
             </div>
           )}

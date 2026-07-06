@@ -58,25 +58,21 @@
 
 - Files to inspect:
   - `src/hooks/useBookmarks.tsx`
-  - `src/lib/bookmark-search/*`
-  - `src/lib/semantic/actions.ts`
-  - `src/lib/semantic/memory-text.ts`
-  - `src/lib/semantic/embeddings.ts`
+  - `src/lib/actions.ts`
+  - `src/lib/cortex.ts`
   - `supabase/schema.sql`
   - `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`
 - Files to update:
-  - Search implementation and focused fixtures/tests
-  - `supabase/schema.sql` plus a migration for schema/RPC changes
+  - Cortex client/action/hook/UI implementation
+  - `supabase/schema.sql` only when a separately approved migration changes legacy search objects
   - `.ai-memory/architecture.md` and `.ai-memory/feature-registry.md`
   - `docs/BOOKMARK_SEARCH_ARCHITECTURE.md` for operational changes
 - Validation steps:
-  - Run `node scripts/evaluate-bookmark-search.mjs`
-  - Run `npx tsx scripts/evaluate-temporal-search.ts` when temporal parsing changes
-  - Run `npm run test`
   - Run `npm run build`
   - Run `npm run lint`
+  - Run `npm run check:bookmark-processor` when create/processor behavior changes
 - Memory updates required:
-  - Update feature registry for search behavior, architecture for route/action/schema boundaries, and decision log for ranking strategy changes
+  - Update feature registry for search behavior, architecture for action/schema boundaries, and decision log for ranking strategy changes
 
 ## UI Change Workflow
 

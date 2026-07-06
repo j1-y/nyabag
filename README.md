@@ -11,6 +11,14 @@ npm install
 npm run dev
 ```
 
+Hosted Cortex search:
+
+```text
+CORTEX_API_URL=https://your-cortex-render-url.onrender.com
+```
+
+Nyabag sends newly created bookmarks to Cortex `/ingest` and uses Cortex `/search` as the active bookmark search backend. `CORTEX_API_URL` is server-only and must not be prefixed with `NEXT_PUBLIC_`. Bookmark creation still succeeds if Cortex is unavailable; active search shows a small unavailable state instead of falling back to the old local/Gemini search stack.
+
 Expected support routes:
 
 - `/` protected bookmarks dashboard
@@ -30,4 +38,5 @@ Expected support routes:
 ```bash
 npm run build
 npm run lint
+npm run check:bookmark-processor
 ```

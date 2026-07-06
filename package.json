@@ -6,7 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node scripts/evaluate-bookmark-search.mjs && tsx scripts/evaluate-temporal-search.ts",
     "lint": "eslint",
     "check:colors": "node scripts/check-colors.mjs",
     "check:design-system": "node scripts/check-design-system.mjs",
@@ -40,7 +39,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
-    "luxon": "^3.7.2",
     "next": "16.2.6",
     "postcss-safe-parser": "^7.0.1",
     "react": "19.2.4",
@@ -53,7 +51,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
-    "@types/luxon": "^3.7.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

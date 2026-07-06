@@ -1,6 +1,6 @@
 # Nyabag Bookmark Processor
 
-This worker processes queued bookmark preview jobs outside the Next.js app. It claims jobs from Supabase, opens each URL with Playwright Chromium, captures a normal top-viewport screenshot for onboarding, captures a long full-page screenshot for app previews and visual memory, compresses both to WebP with Sharp, uploads them to Supabase Storage, and updates the bookmark row.
+This worker processes queued bookmark preview jobs outside the Next.js app. It claims jobs from Supabase, opens each URL with Playwright Chromium, captures a normal top-viewport screenshot for onboarding, captures a long full-page screenshot for app previews and AI design-read metadata, compresses both to WebP with Sharp, uploads them to Supabase Storage, and updates the bookmark row.
 
 ## Local Run
 

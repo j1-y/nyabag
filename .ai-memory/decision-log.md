@@ -28,9 +28,9 @@
 
 - Reason: A memory-check helper should point out drift without mutating the repo or hiding review work.
 
-## Decision: Bookmark search uses TypeScript fusion over a large SQL hybrid RPC
+## Decision: Bookmark search uses TypeScript fusion over a large SQL hybrid RPC (superseded)
 
-- Reason: PostgreSQL should provide owner-scoped weighted lexical retrieval and pgvector candidates, while TypeScript fusion stays easier to test, tune, and integrate with existing visual-memory modules.
+- Reason: Superseded on 2026-07-06 by the hosted Cortex core search boundary. The old Supabase/RPC/fusion objects may remain in the database until an explicit cleanup migration, but they are no longer active app architecture.
 
 ## Decision: Temporal bookmark search is deterministic
 
@@ -67,3 +67,11 @@
 ## Decision: Product typography uses Hanken Grotesk and Inter only
 
 - Reason: A two-font system gives Nyabag a clean, product-focused heading voice while keeping body, control, and code-like UI text quiet and consistent. Hanken Grotesk is loaded for headings through `next/font/google`; Inter is loaded for all non-heading text. Legacy mono token names remain compatibility aliases only and resolve back to Inter.
+
+## Decision: Cortex stays external and server-only
+
+- Reason: Cortex is a hosted memory/search backend, not app code. Nyabag should call it through server-only helpers using `CORTEX_API_URL`, treat ingest as best-effort, and owner-filter returned bookmark IDs through Supabase before returning cards.
+
+## Decision: Cortex is the active bookmark search authority
+
+- Reason: Hosted Cortex replaces the app-side hybrid search stack. Active non-empty dashboard searches call Cortex `/search`, owner-filter returned `nyabagBookmarkId` values through Supabase, and render results in Cortex order. Empty search keeps local bookmark/tag/recent filtering. Cortex outages produce an unavailable search state rather than a lexical/Gemini/visual fallback.

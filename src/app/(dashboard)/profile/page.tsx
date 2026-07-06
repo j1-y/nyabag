@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserProfile } from "@/lib/profile";
 import { ProfileForm } from "@/components/profile/ProfileForm";
-import { SemanticMemoryPanel } from "@/components/profile/SemanticMemoryPanel";
 import { TelegramCapturePanel } from "@/components/profile/TelegramCapturePanel";
 import { getTelegramConnection } from "@/lib/actions";
 
@@ -34,7 +33,6 @@ export default async function ProfilePage() {
         </header>
 
         <ProfileForm profile={profile} />
-        <SemanticMemoryPanel />
         <TelegramCapturePanel initial={telegramState} />
       </div>
     </main>

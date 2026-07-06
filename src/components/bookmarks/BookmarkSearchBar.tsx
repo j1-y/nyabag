@@ -10,11 +10,11 @@ export function BookmarkSearchBar() {
   const {
     search,
     setSearch,
-    isSemanticSearching,
-    semanticError,
-    searchMode,
+    isSearchLoading,
+    searchError,
     searchResultCount,
-    temporalFilter,
+    isCortexSearchActive,
+    isCortexUnavailable,
     clearSearch,
     addOpen,
     importOpen,
@@ -58,23 +58,15 @@ export function BookmarkSearchBar() {
 
   const hasSearch = search.trim().length > 0;
   const hasActiveSearch = search.trim().length >= 2;
-  const statusCopy = isSemanticSearching
-    ? "Searching your memory..."
-    : temporalFilter
-      ? searchMode === "temporal"
-        ? searchResultCount > 0
-          ? `${searchResultCount} ${searchResultCount === 1 ? "bookmark" : "bookmarks"} saved ${temporalFilter.label.toLowerCase()}`
-          : `Saved: ${temporalFilter.label}`
-        : searchResultCount > 0
-          ? "Best matches"
-          : "No matching bookmarks"
-    : semanticError && searchResultCount === 0
-      ? "No strong matches found"
-      : searchResultCount > 0
-        ? searchMode === "keyword"
-          ? "Keyword search"
-          : "Best matches"
-        : semanticError || "No strong matches found";
+  const statusCopy = isSearchLoading
+    ? "Searching Cortex..."
+    : isCortexUnavailable
+      ? "Cortex search unavailable"
+      : isCortexSearchActive && searchResultCount > 0
+        ? "AI search active"
+        : isCortexSearchActive
+          ? "No Cortex matches"
+          : searchError || "Cortex search";
 
   return (
     <form
@@ -107,17 +99,12 @@ export function BookmarkSearchBar() {
           <HugeIcon icon={IconSend} size={18} />
         </button>
       </div>
-      {(hasActiveSearch || semanticError) && (
+      {(hasActiveSearch || searchError) && (
         <div className="search-mode-row" aria-label="IconSearch status">
-          <span className="search-memory-status" role={semanticError ? "status" : undefined}>
+          <span className="search-memory-status" role={searchError ? "status" : undefined}>
             <HugeIcon icon={IconSparkles} size={18} />
             {statusCopy}
           </span>
-          {temporalFilter && searchMode !== "temporal" && (
-            <span className="search-memory-status" aria-label="Temporal filter">
-              Saved: {temporalFilter.label}
-            </span>
-          )}
         </div>
       )}
     </form>

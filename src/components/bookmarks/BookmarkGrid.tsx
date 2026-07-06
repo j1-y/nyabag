@@ -88,13 +88,9 @@ function GridInner({
     filtered,
     pendingBookmarks,
     search,
-    semanticHasRun,
-    semanticError,
-    isSemanticSearching,
-    searchMode,
-    searchResultCount,
-    temporalFilter,
-    effectiveSearchQuery,
+    searchHasRun,
+    searchError,
+    isSearchLoading,
     openAdd,
     openImport,
     openEdit,
@@ -106,13 +102,6 @@ function GridInner({
   const router = useRouter();
   const searchParams = useSearchParams();
   const showSearchDock = !addOpen && !importOpen && !editTarget;
-  const isDateOnlyTemporal = Boolean(temporalFilter && searchMode === "temporal" && !effectiveSearchQuery);
-  const temporalLowerLabel = temporalFilter?.label.toLowerCase() ?? "";
-  const temporalResultTitle = isDateOnlyTemporal
-    ? `${searchResultCount} ${searchResultCount === 1 ? "bookmark" : "bookmarks"} saved ${temporalLowerLabel}`
-    : temporalFilter
-      ? `Best matches saved ${temporalLowerLabel}`
-      : "";
 
   useEffect(() => {
     if (searchParams.get("add") === "1") {
@@ -143,33 +132,20 @@ function GridInner({
           />
         )}
 
-        {temporalFilter && filtered.length > 0 && (
-          <section className="search-temporal-summary dashboard-enter dashboard-enter-delayed" aria-label="Temporal search summary">
-            <h2>{temporalResultTitle}</h2>
-            <p>Saved: {temporalFilter.label}</p>
-          </section>
-        )}
-
         {/* Grid */}
         {filtered.length === 0 && pendingBookmarks.length === 0 ? (
           <div className="empty-state dashboard-enter dashboard-enter-delayed">
             <div className="empty-state-icon" aria-hidden="true">
               <HugeIcon icon={IconBookmark} size={18} />
             </div>
-            {search.trim().length >= 2 && semanticHasRun ? (
+            {search.trim().length >= 2 && searchHasRun ? (
               <>
-                <h2>{temporalFilter ? semanticError || `No matching bookmarks saved ${temporalLowerLabel}` : "No strong matches found"}</h2>
-                <p>
-                  {temporalFilter
-                    ? isDateOnlyTemporal
-                      ? "Try another date range."
-                      : "Try a broader design phrase or another date range."
-                    : semanticError || "Try a broader phrase, another design term, or remove a filter."}
-                </p>
+                <h2>{searchError || "No Cortex matches"}</h2>
+                <p>Try a broader phrase, another design term, or remove a filter.</p>
               </>
             ) : search.trim().length > 0 ? (
               <>
-                <h2>{isSemanticSearching ? "Searching your memory..." : "No strong matches found"}</h2>
+                <h2>{isSearchLoading ? "Searching Cortex..." : "No Cortex matches"}</h2>
                 <p>Try a broader phrase, another design term, or remove a filter.</p>
               </>
             ) : (

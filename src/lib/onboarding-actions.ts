@@ -21,12 +21,11 @@ export type OnboardingBookmarkPreview = {
   processing_error: string | null;
   metadata_refreshed_at: string | null;
   screenshot_refreshed_at: string | null;
-  semantic_status: Bookmark["semantic_status"];
   updated_at: string;
 };
 
 const ONBOARDING_BOOKMARK_PREVIEW_SELECT =
-  "id,url,title,screenshot_url,processing_status,processing_error,metadata_refreshed_at,screenshot_refreshed_at,semantic_status,updated_at";
+  "id,url,title,screenshot_url,processing_status,processing_error,metadata_refreshed_at,screenshot_refreshed_at,updated_at";
 
 async function getAuthenticatedUser(supabase: Supabase): Promise<User | null> {
   const {
