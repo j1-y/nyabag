@@ -3,7 +3,7 @@
 ## Bookmarks
 
 - Feature: Bookmark dashboard
-- Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, detail views, and sidebar-only app navigation.
+- Description: Main saved-inspiration workspace with cards, filtering, pending creation, ranked hybrid search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
 - Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/bookmark-search/*`, `src/lib/semantic/*`, `src/lib/visual-memory/*`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, bookmark tables, lexical search vector, Gemini embeddings, visual memory, normal onboarding screenshot plus long app screenshot enrichment, optional processor jobs
 - Status: Active

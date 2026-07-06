@@ -98,10 +98,14 @@ function GridInner({
     openAdd,
     openImport,
     openEdit,
+    addOpen,
+    importOpen,
+    editTarget,
     deleteItem,
   } = useBookmarks();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const showSearchDock = !addOpen && !importOpen && !editTarget;
   const isDateOnlyTemporal = Boolean(temporalFilter && searchMode === "temporal" && !effectiveSearchQuery);
   const temporalLowerLabel = temporalFilter?.label.toLowerCase() ?? "";
   const temporalResultTitle = isDateOnlyTemporal
@@ -119,7 +123,16 @@ function GridInner({
 
   return (
     <>
-      <BookmarkSearchBar />
+      {showSearchDock && (
+        <>
+          <div className="dashboard-bottom-gradient" aria-hidden="true" />
+          <div className="dashboard-search-dock">
+            <div className="dashboard-search-inner">
+              <BookmarkSearchBar />
+            </div>
+          </div>
+        </>
+      )}
       <main className="dashboard-home">
         {showGreeting && (
           <DashboardGreeting

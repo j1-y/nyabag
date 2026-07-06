@@ -7,7 +7,7 @@ This document applies to the product app: dashboard, bookmarks, Canvas, dialogs,
 ## Foundations
 
 - Body font: `--font`, mapped to `var(--font-inter, sans-serif)`.
-- Heading font: `--font-title`, mapped to `var(--font-fraunces, serif)`.
+- Heading font: `--font-title`, mapped to `var(--font-hanken-grotesk, sans-serif)`.
 - Legacy mono alias: `--font-mono` maps back to Inter through `--font`; do not introduce a separate monospace UI font.
 - Body base: `15px` root size, compact app typography, no negative letter spacing in app chrome.
 

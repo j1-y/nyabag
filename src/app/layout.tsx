@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Hanken_Grotesk, Inter } from "next/font/google";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 
@@ -11,9 +11,9 @@ const inter = Inter({
   display: "swap",
 });
 
-const fraunces = Fraunces({
+const hankenGrotesk = Hanken_Grotesk({
   subsets: ["latin"],
-  variable: "--font-fraunces",
+  variable: "--font-hanken-grotesk",
   display: "swap",
 });
 
@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
-      <body className={`${inter.variable} ${fraunces.variable}`}>
+      <body className={`${inter.variable} ${hankenGrotesk.variable}`}>
         {children}
         <SpeedInsights />
       </body>

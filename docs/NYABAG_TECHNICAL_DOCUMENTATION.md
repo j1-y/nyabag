@@ -1,6 +1,6 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-07-03
+Last updated: 2026-07-06
 
 Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated workspace lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
@@ -157,7 +157,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 | Icons | Hugeicons Stroke Rounded via `@hugeicons/react` and `@hugeicons/core-free-icons` |
 | UI primitives | Radix Dialog primitives for some dialogs |
 | Styling | Global CSS in `src/app/globals.css`, Tailwind tooling present |
-| Typography | Fraunces headings and Inter body text through `next/font/google` |
+| Typography | Hanken Grotesk headings and Inter body text through `next/font/google` |
 | Metadata/screenshot | Playwright bookmark processor plus custom metadata scraper |
 | Deployment target | Vercel |
 
