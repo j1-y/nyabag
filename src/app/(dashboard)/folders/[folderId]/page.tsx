@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getFolderBreadcrumbs } from "@/lib/folders";
-import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
 import { FolderPageClient } from "@/components/folders/FolderPageClient";
 import type { Bookmark, BookmarkFolder } from "@/lib/types";
 
@@ -70,12 +69,7 @@ export default async function FolderPage({
     );
   }
 
-  const rawBookmarks = (bookmarksData ?? []) as Bookmark[];
-  const bookmarks = await attachAiMetadataToBookmarks(
-    supabase,
-    rawBookmarks,
-    user.id
-  );
+  const bookmarks = (bookmarksData ?? []) as Bookmark[];
 
   return (
     <FolderPageClient

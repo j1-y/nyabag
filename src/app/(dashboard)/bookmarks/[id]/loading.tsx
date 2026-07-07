@@ -13,10 +13,6 @@ export default function BookmarkDetailLoading() {
             <div className="skeleton-line" />
             <div className="skeleton-line skeleton-line-kicker" />
           </div>
-          <div className="ai-design-read">
-            <div className="skeleton-line" />
-            <div className="skeleton-line skeleton-line-title" />
-          </div>
           <div className="detail-table">
             <div><span /><strong /></div>
             <div><span /><strong /></div>

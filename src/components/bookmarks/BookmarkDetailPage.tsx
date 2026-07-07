@@ -24,10 +24,6 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
   const [refreshError, setRefreshError] = useState("");
   const domain = getDomain(currentBookmark.url);
   const displayScreenshot = getBookmarkDisplayScreenshot(currentBookmark);
-  const aiMetadata =
-    currentBookmark.ai_metadata?.status === "completed"
-      ? currentBookmark.ai_metadata
-      : null;
 
   function handleDelete() {
     startTransition(async () => {
@@ -103,22 +99,9 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
             <h1>{currentBookmark.title}</h1>
           </div>
 
-          {(currentBookmark.summary || aiMetadata) && (
-            <div className="detail-summary-card detail-website-read">
+          {currentBookmark.summary && (
+            <div className="detail-summary-card">
               {currentBookmark.summary && <p>{currentBookmark.summary}</p>}
-              {aiMetadata && (
-                <div className="detail-ai-overview">
-                  <span>AI Design Read</span>
-                  {aiMetadata.design_context && <p>{aiMetadata.design_context}</p>}
-                  <div className="detail-ai-overview-meta">
-                    {aiMetadata.page_type && <strong>{aiMetadata.page_type}</strong>}
-                    {aiMetadata.industry && <strong>{aiMetadata.industry}</strong>}
-                    {aiMetadata.visual_style.slice(0, 3).map((style) => (
-                      <strong key={style}>{style}</strong>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
@@ -136,25 +119,9 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
 
           <div className="detail-section detail-memory-section">
             <h2><HugeIcon icon={IconSparkles} size={18} /> Design Memory</h2>
-            {currentBookmark.ai_description || aiMetadata?.design_context ? (
-              <p className="detail-memory-description">
-                {currentBookmark.ai_description || aiMetadata?.design_context}
-              </p>
-            ) : (
-              <p className="detail-memory-description">
-                Nyabag sends new saves to Cortex so active search can rank bookmarks by design intent.
-              </p>
-            )}
-            <div className="detail-chip-list">
-              {(currentBookmark.ai_patterns?.length
-                ? currentBookmark.ai_patterns
-                : aiMetadata?.ui_patterns ?? []
-              ).slice(0, 8).map((pattern) => <span key={`pattern-${pattern}`}>{pattern}</span>)}
-              {(currentBookmark.ai_tags?.length
-                ? currentBookmark.ai_tags
-                : aiMetadata?.suggested_tags ?? []
-              ).slice(0, 8).map((tag) => <span key={`ai-tag-${tag}`}>{tag}</span>)}
-            </div>
+            <p className="detail-memory-description">
+              Nyabag sends ready bookmarks to Cortex so active search can rank references by design intent.
+            </p>
           </div>
 
           <div className="detail-section">
@@ -184,7 +151,7 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
             </Button>
             <Button className="detail-action-btn" variant="outline" onClick={handleRefreshScreenshot} disabled={isRefreshing}>
               {isRefreshing ? <HugeIcon icon={IconLoader} className="animate-spin" /> : <HugeIcon icon={IconRefresh} />}
-              {isRefreshing ? "Queueing..." : "Reprocess preview + AI"}
+              {isRefreshing ? "Queueing..." : "Reprocess preview"}
             </Button>
             {currentBookmark.processing_status === "failed" && (
               <Button className="detail-action-btn" variant="outline" onClick={handleRetryProcessing} disabled={isRetrying}>

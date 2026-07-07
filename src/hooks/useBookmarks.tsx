@@ -89,7 +89,6 @@ function getBookmarkSnapshot(bookmarks: Bookmark[]) {
       bookmark.cortex_error ?? "",
       bookmark.cortex_memory_id ?? "",
       bookmark.cortex_ingested_at ?? "",
-      bookmark.ai_metadata?.updated_at ?? "",
     ].join(":"))
     .join("|");
 }

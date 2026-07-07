@@ -54,7 +54,8 @@ function getCortexApiUrl() {
 }
 
 let hasLoggedMissingCortexApiUrl = false;
-let hasLoggedMissingCortexInternalKey = false;
+let hasLoggedMissingCortexDeleteInternalKey = false;
+let hasLoggedMissingCortexSearchInternalKey = false;
 const CORTEX_DELETE_TIMEOUT_MS = 5_000;
 
 export function isCortexConfigured() {
@@ -131,9 +132,9 @@ export async function deleteBookmarkFromCortex(
 
   const internalApiKey = getCortexInternalApiKey();
   if (!internalApiKey) {
-    if (!hasLoggedMissingCortexInternalKey) {
+    if (!hasLoggedMissingCortexDeleteInternalKey) {
       console.warn("[cortex] CORTEX_INTERNAL_API_KEY is not configured; skipping bookmark delete cleanup.");
-      hasLoggedMissingCortexInternalKey = true;
+      hasLoggedMissingCortexDeleteInternalKey = true;
     }
     return null;
   }
@@ -185,6 +186,15 @@ export async function searchCortex({
   const scopedUserId = userId.trim();
   if (!apiUrl || !trimmed || !scopedUserId) return null;
 
+  const internalApiKey = getCortexInternalApiKey();
+  if (!internalApiKey) {
+    if (!hasLoggedMissingCortexSearchInternalKey) {
+      console.warn("[cortex] CORTEX_INTERNAL_API_KEY is not configured; skipping Cortex search.");
+      hasLoggedMissingCortexSearchInternalKey = true;
+    }
+    return null;
+  }
+
   const params = new URLSearchParams({
     q: trimmed,
     limit: String(limit),
@@ -194,6 +204,7 @@ export async function searchCortex({
   try {
     const response = await fetch(`${apiUrl}/search?${params.toString()}`, {
       headers: {
+        Authorization: `Bearer ${internalApiKey}`,
         "X-Nyabag-User-Id": scopedUserId,
       },
       cache: "no-store",

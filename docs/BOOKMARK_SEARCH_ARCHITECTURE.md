@@ -8,13 +8,13 @@ Nyabag active bookmark search is backed by hosted Cortex. Supabase remains the s
 2. A non-empty query of at least two characters is debounced in `src/hooks/useBookmarks.tsx`.
 3. The hook calls the `searchCortexBookmarks()` server action in `src/lib/actions.ts`.
 4. The server action authenticates the current Supabase user.
-5. `src/lib/cortex.ts` calls `GET ${CORTEX_API_URL}/search?q=...&limit=...&userId=...` with `cache: "no-store"` and an `X-Nyabag-User-Id` header.
-6. Cortex must filter search candidates by that authenticated `userId` before ranking.
+5. `src/lib/cortex.ts` calls `GET ${CORTEX_API_URL}/search?q=...&limit=...&userId=...` with `cache: "no-store"`, `Authorization: Bearer ${CORTEX_INTERNAL_API_KEY}`, and an `X-Nyabag-User-Id` header.
+6. Cortex validates the internal bearer token, filters search candidates by `userId`, and applies evidence gating for specific visual terms before returning ranked matches.
 7. Cortex returns ranked rows containing `nyabagBookmarkId`, `userId`, and optional similarity/preview metadata.
 8. Nyabag drops any returned row whose Cortex `userId` does not match the authenticated user, deduplicates IDs, and queries `bookmarks` with both `user_id = auth.user.id` and `id in (...)`.
 9. The final response reorders the owner-filtered Supabase rows to match Cortex ranking.
 
-There is no lexical, Gemini embedding, visual-memory, temporal, or fusion fallback for active searches. If Cortex is unconfigured or unavailable, active search returns a compact unavailable state and the UI shows a small Cortex-unavailable message.
+There is no lexical, Gemini embedding, visual-memory, temporal, or fusion fallback for active searches. If Cortex is unconfigured or unavailable, active search returns a compact unavailable state and the UI shows a small Cortex-unavailable message. Nyabag no longer runs app-side Gemini bookmark enrichment.
 
 ## Server-Only Boundary
 
@@ -25,12 +25,14 @@ There is no lexical, Gemini embedding, visual-memory, temporal, or fusion fallba
 - `ingestBookmarkToCortex(payload)`: server-only `POST /ingest` helper that refuses missing screenshot URLs.
 - `deleteBookmarkFromCortex(payload)`: best-effort `DELETE /memories/bookmark/{id}` cleanup helper for deleted bookmarks.
 - `ingestReadyBookmarksToCortex(limit)`: authenticated server action that posts ready bookmarks with screenshots to Cortex in small batches.
-- `searchCortex({ query, userId, limit })`: user-scoped `GET /search` for active search.
+- `searchCortex({ query, userId, limit })`: authenticated, user-scoped `GET /search` for active search.
 - `isCortexConfigured()`: environment check used by server actions.
 
-Both Cortex calls use `cache: "no-store"`. Ingest failures are logged and never block bookmark creation. Delete cleanup failures are logged and never block bookmark deletion.
+Cortex network calls use `cache: "no-store"`. Ingest failures are logged and never block bookmark creation. Delete cleanup failures are logged and never block bookmark deletion. Search returns the unavailable state if Cortex or the internal key is not configured.
 
-Production safety requirement: Cortex `/search` must honor `userId` server-side. Nyabag still owner-filters returned IDs through Supabase, but that is a final guard, not a substitute for user-scoped retrieval inside Cortex.
+Production safety requirement: Cortex `/search` must validate the internal token and honor `userId` server-side. Nyabag still owner-filters returned IDs through Supabase, but that is a final guard, not a substitute for user-scoped retrieval inside Cortex.
+
+Specific visual searches should require evidence for the concrete term. For example, `globe design` should not return generic landing pages that only match broad words such as `design`, `clean`, or `modern`; Cortex should require evidence such as `globe`, `earth`, `world`, `global`, `planet`, or `map`.
 
 ## Ingest Scope
 
@@ -75,15 +77,23 @@ These fields are display metadata only. Bookmark identity and ownership always c
 
 ## Legacy Supabase Search Objects
 
-The older Supabase search schema objects remain in the database for now:
+The old Nyabag-side Gemini AI metadata layer has been removed:
+
+- `bookmark_ai_metadata`
+- `bookmark_visual_facts`
+- `bookmarks.ai_description`
+- `bookmarks.ai_tags`
+- `bookmarks.ai_patterns`
+- `bookmarks.ai_design_dna`
+
+The older Supabase search schema objects below may still remain in historical databases for now:
 
 - lexical search RPCs
 - search vectors/indexes
 - embedding tables/RPCs
-- visual-memory tables/RPCs
 - semantic status columns
 
-They are legacy leftovers pending a future explicit migration. This Cortex replacement removed the app-side code paths and processor embedding/chunk generation without dropping database objects.
+They are legacy leftovers pending a future explicit migration. Active app code does not call them.
 
 ## Verification
 
@@ -92,7 +102,6 @@ Recommended checks:
 ```bash
 npm run build
 npm run lint
-npm run check:bookmark-processor
 git diff --check
 ```
 
@@ -103,6 +112,7 @@ Manual smoke:
 - Let the processor mark the bookmark ready with `long_screenshot_url` or `screenshot_url`, then open/refresh the dashboard and confirm Cortex receives `POST /ingest`.
 - Delete an ingested bookmark and confirm Cortex receives `DELETE /memories/bookmark/{id}` with the internal bearer token.
 - Search a semantic query and confirm cards follow Cortex result order.
-- Confirm Cortex Render logs show `/search` requests receiving the authenticated `userId`.
+- Search `globe design` and confirm only evidence-backed globe/earth/global matches appear.
+- Confirm Cortex Render logs show `/search` requests receiving the internal bearer token and authenticated `userId`.
 - Break `CORTEX_API_URL` and confirm active search shows the unavailable state instead of falling back to local results.
 - Confirm empty search, tag filters, recent filter, bookmark create/delete, onboarding create, extension create, and Telegram create still work.

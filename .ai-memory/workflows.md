@@ -70,7 +70,7 @@
 - Validation steps:
   - Run `npm run build`
   - Run `npm run lint`
-  - Run `npm run check:bookmark-processor` when create/processor behavior changes
+  - Verify Oracle queue behavior when create/processing behavior changes
 - Memory updates required:
   - Update feature registry for search behavior, architecture for action/schema boundaries, and decision log for ranking strategy changes
 
@@ -93,12 +93,11 @@
 ## Infrastructure Change Workflow
 
 - Files to inspect:
-  - `processor/*`
   - `scripts/*`
   - `.github/workflows/*`
   - `docs/NYABAG_TECHNICAL_DOCUMENTATION.md`
 - Files to update:
-  - The script, workflow, or processor file
+  - The script, workflow, or Oracle integration boundary
   - `architecture.md`
   - `roadmap.md` if the change shifts future work
 - Validation steps:

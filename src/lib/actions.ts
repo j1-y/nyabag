@@ -6,10 +6,6 @@ import { getDesignData } from "@/lib/data";
 import { validatePublicHttpUrl } from "@/lib/security/url-safety";
 import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import { getDomain } from "@/lib/data";
-import { enrichBookmarkDesignMetadataFromScreenshot } from "@/lib/ai/bookmark-enrichment";
-import { GEMINI_MODEL } from "@/lib/ai/gemini";
-import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
-import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import { removeBookmarkScreenshot } from "@/lib/bookmarks/storage";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
 import { deleteBookmarkFromCortex, isCortexConfigured, searchCortex, type CortexSearchResult } from "@/lib/cortex";
@@ -22,7 +18,6 @@ import { extractUrlsFromText } from "@/lib/url-extraction";
 import type {
   ActionResult,
   Bookmark,
-  BookmarkAiMetadata,
   CortexBookmarkSearchPayload,
   ImportBookmarksResult,
   TelegramConnection,
@@ -73,36 +68,6 @@ async function triggerProcessorBestEffort(context: string) {
   }
 }
 
-function normalizeAiTag(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function mergeBookmarkTags(existing: string[], suggested: string[]) {
-  const seen = new Set<string>();
-  const merged: string[] = [];
-
-  for (const value of [...existing, ...suggested]) {
-    const tag = normalizeAiTag(value);
-    if (!tag || seen.has(tag)) continue;
-    seen.add(tag);
-    merged.push(tag);
-    if (merged.length >= 20) break;
-  }
-
-  return merged;
-}
-
-function getShortError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.slice(0, 500);
-}
-
 function getCortexBookmarkId(result: CortexSearchResult) {
   const id = result.nyabagBookmarkId?.trim();
   return id || null;
@@ -146,151 +111,6 @@ function getCortexSearchReasons(result: CortexSearchResult) {
   ].filter((reason): reason is string => Boolean(reason));
 
   return reasons.slice(0, 3);
-}
-
-async function enrichBookmarkWithAIScoped({
-  supabase,
-  userId,
-  bookmarkId,
-  force = false,
-}: {
-  supabase: Supabase;
-  userId: string;
-  bookmarkId: string;
-  force?: boolean;
-}): Promise<ActionResult<BookmarkAiMetadata>> {
-  const { data: bookmark, error: bookmarkError } = await supabase
-    .from("bookmarks")
-    .select("*")
-    .eq("id", bookmarkId)
-    .eq("user_id", userId)
-    .single();
-
-  if (bookmarkError || !bookmark) {
-    return { success: false, error: "Bookmark not found" };
-  }
-
-  if (!force) {
-    const { data: existing, error: existingError } = await supabase
-      .from("bookmark_ai_metadata")
-      .select("*")
-      .eq("bookmark_id", bookmarkId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (!existingError && existing?.status === "completed") {
-      return { success: true, data: existing as BookmarkAiMetadata };
-    }
-  }
-
-  const bookmarkRecord = bookmark as Bookmark;
-  const screenshotUrl = getBookmarkDisplayScreenshot(bookmarkRecord);
-  if (!screenshotUrl) {
-    return { success: false, error: "Preview processing must finish before AI analysis can run" };
-  }
-
-  const screenshotResponse = await fetch(screenshotUrl, { cache: "no-store" });
-  if (!screenshotResponse.ok) {
-    return { success: false, error: `Could not fetch bookmark screenshot (${screenshotResponse.status})` };
-  }
-
-  const screenshot = Buffer.from(await screenshotResponse.arrayBuffer());
-  const contentType = screenshotResponse.headers.get("content-type") || "image/webp";
-
-  const pendingPayload = {
-    bookmark_id: bookmarkId,
-    user_id: userId,
-    status: "pending",
-    model_name: GEMINI_MODEL,
-    error: null,
-  };
-
-  const { error: pendingError } = await supabase
-    .from("bookmark_ai_metadata")
-    .upsert(pendingPayload, { onConflict: "bookmark_id" });
-
-  if (pendingError) return { success: false, error: pendingError.message };
-
-  try {
-    const enriched = await enrichBookmarkDesignMetadataFromScreenshot({
-      bookmark: bookmarkRecord,
-      screenshot,
-      mimeType: contentType,
-      observed: {
-        metadata: {
-          source: "manual-refresh",
-          screenshot_url: screenshotUrl,
-          title: bookmarkRecord.title,
-          summary: bookmarkRecord.summary,
-        },
-        colors: {
-          palette: bookmarkRecord.palette,
-        },
-        typography: {
-          fonts: bookmarkRecord.fonts,
-        },
-      },
-    });
-    const completedPayload = {
-      bookmark_id: bookmarkId,
-      user_id: userId,
-      page_type: enriched.page_type,
-      industry: enriched.industry,
-      visual_style: enriched.visual_style,
-      ui_patterns: enriched.ui_patterns,
-      components: enriched.components,
-      suggested_tags: enriched.suggested_tags,
-      suggested_folder: enriched.suggested_folder,
-      design_context: enriched.design_context,
-      confidence: enriched.confidence,
-      model_name: enriched.model_name,
-      raw_response: enriched.raw_response,
-      error: null,
-      status: "completed",
-    };
-
-    const { data: metadata, error: metadataError } = await supabase
-      .from("bookmark_ai_metadata")
-      .upsert(completedPayload, { onConflict: "bookmark_id" })
-      .select()
-      .single();
-
-    if (metadataError) return { success: false, error: metadataError.message };
-
-    const nextTags = mergeBookmarkTags((bookmark as Bookmark).tags ?? [], enriched.suggested_tags);
-    await supabase
-      .from("bookmarks")
-      .update({ tags: nextTags })
-      .eq("id", bookmarkId)
-      .eq("user_id", userId);
-
-    revalidatePath("/");
-    revalidatePath(`/bookmarks/${bookmarkId}`);
-
-    return { success: true, data: metadata as BookmarkAiMetadata };
-  } catch (error) {
-    const shortError = getShortError(error);
-    const { error: failedError } = await supabase
-      .from("bookmark_ai_metadata")
-      .upsert(
-        {
-          bookmark_id: bookmarkId,
-          user_id: userId,
-          status: "failed",
-          model_name: GEMINI_MODEL,
-          error: shortError,
-        },
-        { onConflict: "bookmark_id" }
-      );
-
-    if (failedError) return { success: false, error: failedError.message };
-
-    console.warn("[enrichBookmarkWithAI] Gemini enrichment failed:", shortError);
-    revalidatePath("/");
-    revalidatePath(`/bookmarks/${bookmarkId}`);
-
-    return { success: false, error: shortError };
-  }
 }
 
 async function createBookmarkForUser({
@@ -507,7 +327,7 @@ export async function searchCortexBookmarks(
     return { success: false, error: error.message };
   }
 
-  const bookmarks = await attachAiMetadataToBookmarks(supabase, (data ?? []) as Bookmark[], user.id);
+  const bookmarks = (data ?? []) as Bookmark[];
   const bookmarkById = new Map(bookmarks.map((bookmark) => [bookmark.id, bookmark]));
   const resultById = new Map<string, CortexSearchResult>();
 
@@ -548,82 +368,6 @@ export async function searchCortexBookmarks(
       configured: true,
     },
   };
-}
-
-export async function enrichBookmarkWithAI(
-  bookmarkId: string
-): Promise<ActionResult<BookmarkAiMetadata>> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      success: false,
-      error: "Not authenticated",
-    };
-  }
-
-  const rate = await checkRateLimit({
-    scope: "bookmark-ai-enrich",
-    identifier: userLimitKey(user.id),
-    limit: 20,
-    windowSeconds: 24 * 60 * 60,
-  });
-
-  if (!rate.allowed) {
-    return {
-      success: false,
-      error: "AI analysis limit reached for today.",
-    };
-  }
-
-  return enrichBookmarkWithAIScoped({
-    supabase,
-    userId: user.id,
-    bookmarkId,
-    force: false,
-  });
-}
-
-export async function refreshBookmarkAI(
-  bookmarkId: string
-): Promise<ActionResult<BookmarkAiMetadata>> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return {
-      success: false,
-      error: "Not authenticated",
-    };
-  }
-
-  const rate = await checkRateLimit({
-    scope: "bookmark-ai-refresh",
-    identifier: userLimitKey(user.id),
-    limit: 5,
-    windowSeconds: 24 * 60 * 60,
-  });
-
-  if (!rate.allowed) {
-    return {
-      success: false,
-      error: "AI refresh limit reached for today.",
-    };
-  }
-
-  return enrichBookmarkWithAIScoped({
-    supabase,
-    userId: user.id,
-    bookmarkId,
-    force: true,
-  });
 }
 
 export async function importBookmarks(
@@ -1115,8 +859,7 @@ export async function getBookmarks(): Promise<ActionResult<Bookmark[]>> {
     .order("created_at", { ascending: false });
 
   if (error) return { success: false, error: error.message };
-  const bookmarks = await attachAiMetadataToBookmarks(supabase, (data ?? []) as Bookmark[], user.id);
-  return { success: true, data: bookmarks };
+  return { success: true, data: (data ?? []) as Bookmark[] };
 }
 
 export async function getProcessingBookmarks(): Promise<ActionResult<Bookmark[]>> {

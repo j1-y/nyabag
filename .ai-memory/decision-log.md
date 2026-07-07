@@ -78,8 +78,16 @@
 
 ## Decision: Cortex ingest waits for ready screenshots
 
-- Reason: Cortex vision ingest requires a real screenshot URL, but bookmark creation rows start with null screenshot fields while Oracle/processor work is queued. Nyabag now tracks ingest with dedicated `cortex_*` bookmark columns and posts to Cortex only after `processing_status = "ready"` and `long_screenshot_url` or `screenshot_url` exists.
+- Reason: Cortex vision ingest requires a real screenshot URL, but bookmark creation rows start with null screenshot fields while Oracle work is queued. Nyabag now tracks ingest with dedicated `cortex_*` bookmark columns and posts to Cortex only after `processing_status = "ready"` and `long_screenshot_url` or `screenshot_url` exists.
 
 ## Decision: Bookmark deletes clean up Cortex best-effort
 
 - Reason: Nyabag owner-filters Cortex search results through Supabase, so deleted bookmark rows do not render, but stale Neon memory and embedding rows can still waste Cortex ranking slots. Deletion now removes Supabase first, then best-effort calls an internal-key-protected Cortex delete endpoint.
+
+## Decision: Retire Nyabag-side Gemini bookmark enrichment
+
+- Reason: Cortex is now the AI memory/search authority. The old app/processor Gemini layer caused separate quota and availability failures while duplicating Cortex work, so Nyabag removes `bookmark_ai_metadata`, `bookmark_visual_facts`, bookmark `ai_*` fields, old AI UI, and direct Gemini dependencies.
+
+## Decision: Oracle owns bookmark processing
+
+- Reason: Screenshot and metadata processing now belongs to the external Oracle worker. Nyabag keeps the Supabase job queue contract but removes the old local/GitHub `processor/` worker, GitHub Actions dispatch, and processor check script.

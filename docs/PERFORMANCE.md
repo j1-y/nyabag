@@ -6,9 +6,9 @@ Nyabag keeps private Supabase data uncached by default and optimizes perceived s
 
 ## Bookmark Enrichment
 
-Bookmark creation inserts a basic row immediately with `processing_status = 'queued'`, fallback title, user-entered tags/note, fallback design data, and no screenshot. Heavy metadata extraction, Playwright screenshot generation, Sharp optimization, storage upload, and final row update run in GitHub Actions through the standalone `processor/` worker.
+Bookmark creation inserts a basic row immediately with `processing_status = 'queued'`, fallback title, user-entered tags/note, fallback design data, and no screenshot. Heavy metadata extraction, screenshot generation, optimization, storage upload, and final row update run in Oracle, which polls Supabase `bookmark_processing_jobs`.
 
-The app best-effort triggers the processor with `workflow_dispatch`, backed by a 5-minute scheduled workflow fallback. See `docs/BOOKMARK_PROCESSOR.md` for setup and debugging.
+The app does not dispatch GitHub Actions for bookmark processing. It only enqueues work and returns immediately; Oracle owns job claiming, retries, screenshots, metadata, and ready/failed status updates.
 
 Processing states:
 - `queued`: row is visible and waiting for the worker.

@@ -58,10 +58,6 @@ ALTER TABLE bookmarks
   ADD COLUMN IF NOT EXISTS processing_error TEXT,
   ADD COLUMN IF NOT EXISTS enrichment_started_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS enrichment_finished_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS ai_description TEXT,
-  ADD COLUMN IF NOT EXISTS ai_tags TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS ai_patterns TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS ai_design_dna JSONB NOT NULL DEFAULT '{}'::jsonb,
   ADD COLUMN IF NOT EXISTS save_reason TEXT,
   ADD COLUMN IF NOT EXISTS semantic_status TEXT NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS semantic_error TEXT,
@@ -81,7 +77,6 @@ ALTER TABLE bookmarks
   DROP CONSTRAINT IF EXISTS bookmarks_summary_check,
   DROP CONSTRAINT IF EXISTS bookmarks_note_check,
   DROP CONSTRAINT IF EXISTS bookmarks_processing_status_check,
-  DROP CONSTRAINT IF EXISTS bookmarks_ai_description_check,
   DROP CONSTRAINT IF EXISTS bookmarks_save_reason_check,
   DROP CONSTRAINT IF EXISTS bookmarks_semantic_status_check,
   DROP CONSTRAINT IF EXISTS bookmarks_semantic_error_check,
@@ -94,7 +89,6 @@ ALTER TABLE bookmarks
   ADD CONSTRAINT bookmarks_summary_check CHECK (char_length(summary) <= 1000),
   ADD CONSTRAINT bookmarks_note_check CHECK (char_length(note) <= 2000),
   ADD CONSTRAINT bookmarks_processing_status_check CHECK (processing_status IN ('queued', 'processing', 'ready', 'failed')),
-  ADD CONSTRAINT bookmarks_ai_description_check CHECK (ai_description IS NULL OR char_length(ai_description) <= 1200),
   ADD CONSTRAINT bookmarks_save_reason_check CHECK (save_reason IS NULL OR char_length(save_reason) <= 500),
   ADD CONSTRAINT bookmarks_semantic_status_check CHECK (semantic_status IN ('pending', 'processing', 'ready', 'failed', 'skipped')),
   ADD CONSTRAINT bookmarks_semantic_error_check CHECK (semantic_error IS NULL OR char_length(semantic_error) <= 500),
@@ -119,6 +113,27 @@ CREATE INDEX IF NOT EXISTS idx_bookmarks_cortex_ready_ingest
     AND (screenshot_url IS NOT NULL OR long_screenshot_url IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_search_vector ON bookmarks USING GIN(search_vector);
 
+DROP TRIGGER IF EXISTS bookmarks_search_vector_update ON bookmarks;
+ALTER TABLE bookmarks
+  DROP COLUMN IF EXISTS ai_description,
+  DROP COLUMN IF EXISTS ai_tags,
+  DROP COLUMN IF EXISTS ai_patterns,
+  DROP COLUMN IF EXISTS ai_design_dna;
+
+DROP FUNCTION IF EXISTS build_bookmark_search_vector(
+  TEXT,
+  TEXT,
+  TEXT[],
+  TEXT,
+  TEXT,
+  TEXT,
+  TEXT,
+  TEXT[],
+  TEXT[],
+  TEXT[],
+  JSONB
+);
+
 CREATE OR REPLACE FUNCTION bookmark_hostname(bookmark_url TEXT)
 RETURNS TEXT
 LANGUAGE SQL
@@ -134,11 +149,7 @@ CREATE OR REPLACE FUNCTION build_bookmark_search_vector(
   bookmark_summary TEXT,
   bookmark_note TEXT,
   bookmark_save_reason TEXT,
-  bookmark_ai_description TEXT,
-  bookmark_ai_tags TEXT[],
-  bookmark_ai_patterns TEXT[],
-  bookmark_fonts TEXT[],
-  bookmark_ai_design_dna JSONB
+  bookmark_fonts TEXT[]
 )
 RETURNS TSVECTOR
 LANGUAGE SQL
@@ -148,14 +159,10 @@ AS $$
     setweight(to_tsvector('english', coalesce(bookmark_title, '')), 'A') ||
     setweight(to_tsvector('english', bookmark_hostname(bookmark_url)), 'A') ||
     setweight(to_tsvector('english', array_to_string(coalesce(bookmark_tags, '{}'), ' ')), 'A') ||
-    setweight(to_tsvector('english', array_to_string(coalesce(bookmark_ai_patterns, '{}'), ' ')), 'B') ||
-    setweight(to_tsvector('english', array_to_string(coalesce(bookmark_ai_tags, '{}'), ' ')), 'B') ||
     setweight(to_tsvector('english', coalesce(bookmark_note, '')), 'B') ||
     setweight(to_tsvector('english', coalesce(bookmark_save_reason, '')), 'B') ||
     setweight(to_tsvector('english', coalesce(bookmark_summary, '')), 'C') ||
-    setweight(to_tsvector('english', coalesce(bookmark_ai_description, '')), 'C') ||
-    setweight(to_tsvector('english', array_to_string(coalesce(bookmark_fonts, '{}'), ' ')), 'D') ||
-    setweight(to_tsvector('english', coalesce(bookmark_ai_design_dna::text, '')), 'D');
+    setweight(to_tsvector('english', array_to_string(coalesce(bookmark_fonts, '{}'), ' ')), 'D');
 $$;
 
 CREATE OR REPLACE FUNCTION update_bookmark_search_vector()
@@ -170,11 +177,7 @@ BEGIN
     NEW.summary,
     NEW.note,
     NEW.save_reason,
-    NEW.ai_description,
-    NEW.ai_tags,
-    NEW.ai_patterns,
-    NEW.fonts,
-    NEW.ai_design_dna
+    NEW.fonts
   );
   RETURN NEW;
 END;
@@ -182,7 +185,7 @@ $$;
 
 DROP TRIGGER IF EXISTS bookmarks_search_vector_update ON bookmarks;
 CREATE TRIGGER bookmarks_search_vector_update
-  BEFORE INSERT OR UPDATE OF title, url, tags, summary, note, save_reason, ai_description, ai_tags, ai_patterns, fonts, ai_design_dna ON bookmarks
+  BEFORE INSERT OR UPDATE OF title, url, tags, summary, note, save_reason, fonts ON bookmarks
   FOR EACH ROW EXECUTE FUNCTION update_bookmark_search_vector();
 
 UPDATE bookmarks
@@ -193,11 +196,7 @@ SET search_vector = build_bookmark_search_vector(
   summary,
   note,
   save_reason,
-  ai_description,
-  ai_tags,
-  ai_patterns,
-  fonts,
-  ai_design_dna
+  fonts
 )
 WHERE search_vector IS NULL;
 
@@ -377,100 +376,8 @@ DROP POLICY IF EXISTS "delete_own_bookmarks" ON bookmarks;
 CREATE POLICY "delete_own_bookmarks" ON bookmarks
   FOR DELETE USING (auth.uid() = user_id);
 
--- ============================================================
--- Bookmark AI metadata
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS bookmark_ai_metadata (
-  id                UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  bookmark_id       UUID        NOT NULL REFERENCES bookmarks(id) ON DELETE CASCADE,
-  user_id           UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  page_type         TEXT        NOT NULL DEFAULT '',
-  industry          TEXT        NOT NULL DEFAULT '',
-  visual_style      TEXT[]      NOT NULL DEFAULT '{}',
-  ui_patterns       TEXT[]      NOT NULL DEFAULT '{}',
-  components        TEXT[]      NOT NULL DEFAULT '{}',
-  suggested_tags    TEXT[]      NOT NULL DEFAULT '{}',
-  suggested_folder  TEXT        NOT NULL DEFAULT '',
-  design_context    TEXT        NOT NULL DEFAULT '',
-  confidence        NUMERIC     NOT NULL DEFAULT 0,
-  model_name        TEXT        NOT NULL DEFAULT '',
-  raw_response      JSONB,
-  error             TEXT,
-  status            TEXT        NOT NULL DEFAULT 'pending',
-  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE bookmark_ai_metadata
-  ADD COLUMN IF NOT EXISTS bookmark_id UUID,
-  ADD COLUMN IF NOT EXISTS user_id UUID,
-  ADD COLUMN IF NOT EXISTS page_type TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS industry TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS visual_style TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS ui_patterns TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS components TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS suggested_tags TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS suggested_folder TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS design_context TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS confidence NUMERIC NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS model_name TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS raw_response JSONB,
-  ADD COLUMN IF NOT EXISTS error TEXT,
-  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending',
-  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-ALTER TABLE bookmark_ai_metadata
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_bookmark_id_fkey,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_user_id_fkey,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_status_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_confidence_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_page_type_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_industry_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_suggested_folder_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_design_context_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_model_name_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_error_check,
-  DROP CONSTRAINT IF EXISTS bookmark_ai_metadata_bookmark_id_key,
-  ADD CONSTRAINT bookmark_ai_metadata_bookmark_id_fkey FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
-  ADD CONSTRAINT bookmark_ai_metadata_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-  ADD CONSTRAINT bookmark_ai_metadata_status_check CHECK (status IN ('pending', 'completed', 'failed')),
-  ADD CONSTRAINT bookmark_ai_metadata_confidence_check CHECK (confidence >= 0 AND confidence <= 1),
-  ADD CONSTRAINT bookmark_ai_metadata_page_type_check CHECK (char_length(page_type) <= 80),
-  ADD CONSTRAINT bookmark_ai_metadata_industry_check CHECK (char_length(industry) <= 80),
-  ADD CONSTRAINT bookmark_ai_metadata_suggested_folder_check CHECK (char_length(suggested_folder) <= 80),
-  ADD CONSTRAINT bookmark_ai_metadata_design_context_check CHECK (char_length(design_context) <= 700),
-  ADD CONSTRAINT bookmark_ai_metadata_model_name_check CHECK (char_length(model_name) <= 120),
-  ADD CONSTRAINT bookmark_ai_metadata_error_check CHECK (error IS NULL OR char_length(error) <= 500),
-  ADD CONSTRAINT bookmark_ai_metadata_bookmark_id_key UNIQUE (bookmark_id);
-
-DROP TRIGGER IF EXISTS bookmark_ai_metadata_updated_at ON bookmark_ai_metadata;
-CREATE TRIGGER bookmark_ai_metadata_updated_at
-  BEFORE UPDATE ON bookmark_ai_metadata
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE INDEX IF NOT EXISTS idx_bookmark_ai_metadata_user_id ON bookmark_ai_metadata(user_id);
-CREATE INDEX IF NOT EXISTS idx_bookmark_ai_metadata_bookmark_id ON bookmark_ai_metadata(bookmark_id);
-CREATE INDEX IF NOT EXISTS idx_bookmark_ai_metadata_status ON bookmark_ai_metadata(status);
-
-ALTER TABLE bookmark_ai_metadata ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "select_own_bookmark_ai_metadata" ON bookmark_ai_metadata;
-CREATE POLICY "select_own_bookmark_ai_metadata" ON bookmark_ai_metadata
-  FOR SELECT USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "insert_own_bookmark_ai_metadata" ON bookmark_ai_metadata;
-CREATE POLICY "insert_own_bookmark_ai_metadata" ON bookmark_ai_metadata
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "update_own_bookmark_ai_metadata" ON bookmark_ai_metadata;
-CREATE POLICY "update_own_bookmark_ai_metadata" ON bookmark_ai_metadata
-  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "delete_own_bookmark_ai_metadata" ON bookmark_ai_metadata;
-CREATE POLICY "delete_own_bookmark_ai_metadata" ON bookmark_ai_metadata
-  FOR DELETE USING (auth.uid() = user_id);
+DROP TABLE IF EXISTS bookmark_ai_metadata CASCADE;
+DROP TABLE IF EXISTS bookmark_visual_facts CASCADE;
 
 -- ============================================================
 -- Bookmark semantic embeddings
@@ -608,105 +515,8 @@ AS $$
 $$;
 
 -- ============================================================
--- Visual memory facts and chunks
+-- Bookmark memory chunks
 -- ============================================================
-
-CREATE TABLE IF NOT EXISTS bookmark_visual_facts (
-  id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id             UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  bookmark_id         UUID        NOT NULL REFERENCES bookmarks(id) ON DELETE CASCADE,
-  version             INTEGER     NOT NULL DEFAULT 1,
-  source              TEXT        NOT NULL DEFAULT 'processor',
-  status              TEXT        NOT NULL DEFAULT 'pending',
-  facts               JSONB       NOT NULL DEFAULT '{}'::jsonb,
-  dom_snapshot        JSONB       NOT NULL DEFAULT '{}'::jsonb,
-  vision_snapshot     JSONB       NOT NULL DEFAULT '{}'::jsonb,
-  section_facts       JSONB       NOT NULL DEFAULT '[]'::jsonb,
-  visible_text        TEXT[]      NOT NULL DEFAULT '{}',
-  visible_brands      TEXT[]      NOT NULL DEFAULT '{}',
-  detected_components TEXT[]      NOT NULL DEFAULT '{}',
-  detected_patterns   TEXT[]      NOT NULL DEFAULT '{}',
-  detected_styles     TEXT[]      NOT NULL DEFAULT '{}',
-  detected_colors     TEXT[]      NOT NULL DEFAULT '{}',
-  confidence          NUMERIC     NOT NULL DEFAULT 0,
-  error               TEXT,
-  content_hash        TEXT        NOT NULL DEFAULT '',
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-ALTER TABLE bookmark_visual_facts
-  ADD COLUMN IF NOT EXISTS user_id UUID,
-  ADD COLUMN IF NOT EXISTS bookmark_id UUID,
-  ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'processor',
-  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending',
-  ADD COLUMN IF NOT EXISTS facts JSONB NOT NULL DEFAULT '{}'::jsonb,
-  ADD COLUMN IF NOT EXISTS dom_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
-  ADD COLUMN IF NOT EXISTS vision_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
-  ADD COLUMN IF NOT EXISTS section_facts JSONB NOT NULL DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS visible_text TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS visible_brands TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS detected_components TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS detected_patterns TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS detected_styles TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS detected_colors TEXT[] NOT NULL DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS confidence NUMERIC NOT NULL DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS error TEXT,
-  ADD COLUMN IF NOT EXISTS content_hash TEXT NOT NULL DEFAULT '',
-  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-ALTER TABLE bookmark_visual_facts
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_user_id_fkey,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_bookmark_id_fkey,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_user_bookmark_key,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_status_check,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_confidence_check,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_error_check,
-  DROP CONSTRAINT IF EXISTS bookmark_visual_facts_content_hash_check,
-  ADD CONSTRAINT bookmark_visual_facts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
-  ADD CONSTRAINT bookmark_visual_facts_bookmark_id_fkey FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE,
-  ADD CONSTRAINT bookmark_visual_facts_user_bookmark_key UNIQUE (user_id, bookmark_id),
-  ADD CONSTRAINT bookmark_visual_facts_status_check CHECK (status IN ('pending', 'completed', 'failed')),
-  ADD CONSTRAINT bookmark_visual_facts_confidence_check CHECK (confidence >= 0 AND confidence <= 1),
-  ADD CONSTRAINT bookmark_visual_facts_error_check CHECK (error IS NULL OR char_length(error) <= 1000),
-  ADD CONSTRAINT bookmark_visual_facts_content_hash_check CHECK (char_length(content_hash) <= 120);
-
-DROP TRIGGER IF EXISTS bookmark_visual_facts_updated_at ON bookmark_visual_facts;
-CREATE TRIGGER bookmark_visual_facts_updated_at
-  BEFORE UPDATE ON bookmark_visual_facts
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_user_id_idx ON bookmark_visual_facts(user_id);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_bookmark_id_idx ON bookmark_visual_facts(bookmark_id);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_status_idx ON bookmark_visual_facts(status);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_facts_gin_idx ON bookmark_visual_facts USING GIN(facts);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_section_facts_gin_idx ON bookmark_visual_facts USING GIN(section_facts);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_visible_text_gin_idx ON bookmark_visual_facts USING GIN(visible_text);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_visible_brands_gin_idx ON bookmark_visual_facts USING GIN(visible_brands);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_components_gin_idx ON bookmark_visual_facts USING GIN(detected_components);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_patterns_gin_idx ON bookmark_visual_facts USING GIN(detected_patterns);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_styles_gin_idx ON bookmark_visual_facts USING GIN(detected_styles);
-CREATE INDEX IF NOT EXISTS bookmark_visual_facts_colors_gin_idx ON bookmark_visual_facts USING GIN(detected_colors);
-
-ALTER TABLE bookmark_visual_facts ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "select_own_bookmark_visual_facts" ON bookmark_visual_facts;
-CREATE POLICY "select_own_bookmark_visual_facts" ON bookmark_visual_facts
-  FOR SELECT USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "insert_own_bookmark_visual_facts" ON bookmark_visual_facts;
-CREATE POLICY "insert_own_bookmark_visual_facts" ON bookmark_visual_facts
-  FOR INSERT WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "update_own_bookmark_visual_facts" ON bookmark_visual_facts;
-CREATE POLICY "update_own_bookmark_visual_facts" ON bookmark_visual_facts
-  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "delete_own_bookmark_visual_facts" ON bookmark_visual_facts;
-CREATE POLICY "delete_own_bookmark_visual_facts" ON bookmark_visual_facts
-  FOR DELETE USING (auth.uid() = user_id);
 
 CREATE TABLE IF NOT EXISTS bookmark_memory_chunks (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -9,7 +9,6 @@ import { getDomain, getFaviconUrl } from "@/lib/data";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import type { Bookmark } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { AIMetadataChip } from "./AIMetadataChip";
 import { DeleteBookmarkDialog } from "./DeleteBookmarkDialog";
 import { MoveToFolderMenu } from "@/components/folders/MoveToFolderMenu";
 
@@ -53,10 +52,6 @@ function BookmarkCardComponent({
   const isPendingPreview = isQueued || isProcessing;
   const isFailed = bookmark.processing_status === "failed";
   const pendingLabel = isQueued ? "Queued for preview" : "Preparing preview...";
-  const aiPageType =
-    bookmark.ai_metadata?.status === "completed" && bookmark.ai_metadata.page_type
-      ? bookmark.ai_metadata.page_type
-      : "";
   const isCortexMatch = bookmark.search_mode === "cortex" || typeof bookmark.search_score === "number";
   const memoryLabel = bookmark.match_label ?? "Cortex match";
   const memoryChipClass = bookmark.match_strength ? `is-${bookmark.match_strength}` : "is-related";
@@ -209,14 +204,6 @@ function BookmarkCardComponent({
               </div>
             )}
           </div>
-
-          {aiPageType && (
-            <AIMetadataChip
-              label={aiPageType}
-              showIcon
-              className="bookmark-ai-chip"
-            />
-          )}
 
           {(isCortexMatch || bookmark.match_label) && (
             <div className={`bookmark-memory-chip ${memoryChipClass}`} title={evidenceTitle}>

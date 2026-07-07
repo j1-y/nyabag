@@ -44,22 +44,22 @@
 
 ## Processing pipeline
 
-- Bookmark creation inserts a row first, then triggers enrichment and processor work.
+- Bookmark creation inserts a row first, then enqueues Oracle processing work.
 - Cortex ingest is deferred until a bookmark has `processing_status = "ready"` and either `long_screenshot_url` or `screenshot_url`; dashboard state calls `ingestReadyBookmarksToCortex()` in small throttled batches.
 - Bookmark deletion removes the Supabase row first, then best-effort calls Cortex to delete matching Neon `cortex_memories` and `cortex_embeddings` rows by bookmark id plus user id.
-- The bookmark processor lives under `processor/*`.
+- Oracle is the external bookmark processor. Nyabag no longer includes the old local/GitHub `processor/` worker; `triggerBookmarkProcessor()` is a server-only no-op that documents Oracle polling.
 - Screenshot and metadata enrichment are intentionally best-effort and must remain fallback-safe.
-- Bookmark processing captures two screenshots per URL job: a normal top-viewport WebP stored in `screenshot_url` for onboarding, then a long full-page WebP stored in `long_screenshot_url` for dashboard cards, folder cards, detail pages, AI metadata, and visual facts. App display falls back to `screenshot_url` when `long_screenshot_url` is missing.
+- Oracle processing captures two screenshots per URL job: a normal top-viewport WebP stored in `screenshot_url` for onboarding, then a long full-page WebP stored in `long_screenshot_url` for dashboard cards, folder cards, detail pages, and Cortex ingest. App display falls back to `screenshot_url` when `long_screenshot_url` is missing.
 
 ## Bookmark search architecture
 
 - Active dashboard searches must use Cortex via `searchCortexBookmarks()` in `src/lib/actions.ts`; do not reintroduce app-side lexical/Gemini/visual/fusion fallback for active queries.
 - Empty search still uses the loaded local bookmark list with tag and recent filters.
-- `CORTEX_API_URL` is server-only and required for active search. If missing or broken, the active search UI shows a Cortex-unavailable state.
-- Cortex returns ranked `nyabagBookmarkId` values only. Nyabag must owner-filter those IDs through Supabase and return bookmark rows in Cortex order.
+- `CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY` are server-only and required for active search. If either is missing or broken, the active search UI shows a Cortex-unavailable state.
+- Cortex validates the internal token, scopes retrieval by `userId`, applies evidence gating for specific visual terms, and returns ranked `nyabagBookmarkId` values. Nyabag must still owner-filter those IDs through Supabase and return bookmark rows in Cortex order.
 - `bookmarks.cortex_status` tracks deferred ingest separately from legacy `semantic_status`.
-- `CORTEX_INTERNAL_API_KEY` is server-only and required for destructive Cortex cleanup endpoints.
-- Legacy Supabase search objects remain in `supabase/schema.sql` until a future explicit cleanup migration; treat them as inactive leftovers, not active app architecture.
+- `CORTEX_INTERNAL_API_KEY` is also required for destructive Cortex cleanup endpoints.
+- Legacy Nyabag-side Gemini AI metadata is removed. Do not reintroduce `bookmark_ai_metadata`, `bookmark_visual_facts`, bookmark `ai_*` fields, or app-side Gemini enrichment; Cortex owns AI memory/search.
 - Full operational details live in `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`.
 
 ## Important boundaries

@@ -44,11 +44,11 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Add, edit, and delete bookmarks.
 - First-run onboarding asks users to save one real bookmark so the core product loop is visible before setup work.
 - Moodboard-style bookmark grid.
-- Cortex-backed active bookmark search. Hosted Cortex ranks semantic matches and returns `nyabagBookmarkId` values; Nyabag owner-filters those IDs through Supabase before returning cards.
+- Cortex-backed active bookmark search. Hosted Cortex validates the internal token, scopes search by user, evidence-gates specific visual queries, and returns `nyabagBookmarkId` values; Nyabag owner-filters those IDs through Supabase before returning cards.
 - Empty search still uses the normal local bookmark list with tag and recent filters.
 - Tag filtering and recent filtering.
 - Visual detail page for each bookmark.
-- Dual website screenshots through the Playwright bookmark processor: a normal top-viewport image for onboarding and a long full-page image for app previews.
+- Dual website screenshots through Oracle processing: a normal top-viewport image for onboarding and a long full-page image for app previews.
 - Palette extraction from stored screenshot data where available.
 - Fallback palette/font generation based on domain.
 - Metadata scraping for title, summary, and inferred tags.
@@ -159,7 +159,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 | UI primitives | Radix Dialog primitives for some dialogs |
 | Styling | Global CSS in `src/app/globals.css`, Tailwind tooling present |
 | Typography | Hanken Grotesk headings and Inter body text through `next/font/google` |
-| Metadata/screenshot | Playwright bookmark processor plus custom metadata scraper |
+| Metadata/screenshot | External Oracle bookmark processor plus app fallback metadata helpers |
 | Deployment target | Vercel |
 
 Important scripts:
@@ -270,7 +270,7 @@ Important fields:
 | `fonts` | Detected or fallback fonts |
 | `screenshot_url` | Normal top-viewport screenshot URL used by onboarding and fallback display |
 | `screenshot_refreshed_at` | Normal screenshot timestamp |
-| `long_screenshot_url` | Long full-page screenshot URL preferred by dashboard, folder, detail, AI, and visual-facts surfaces |
+| `long_screenshot_url` | Long full-page screenshot URL preferred by dashboard, folder, detail, and Cortex ingest surfaces |
 | `long_screenshot_refreshed_at` | Long screenshot timestamp |
 | `summary` | Metadata description summary |
 | `metadata_refreshed_at` | Metadata scrape timestamp |
@@ -406,8 +406,8 @@ Used by:
 Performance lifecycle:
 - `createBookmark(formData)` inserts a basic bookmark row immediately and returns it with `processing_status = "queued"`.
 - A `bookmark_processing_jobs` row is created for the same bookmark.
-- The app best-effort triggers the GitHub Actions processor through `workflow_dispatch`; a 5-minute cron fallback also runs the processor.
-- The standalone `processor/` worker uses Playwright for one normal top-viewport screenshot plus one long full-page screenshot, Sharp for WebP compression, and Supabase Storage for uploads.
+- Oracle polls and claims `bookmark_processing_jobs` from Supabase; the app no longer dispatches GitHub Actions or ships a local processor worker.
+- Oracle writes one normal top-viewport screenshot plus one long full-page screenshot to Supabase Storage, then updates the bookmark row.
 - The normal screenshot is written first so onboarding can complete; completed long-screenshot enrichment marks the row `ready`. Failures mark it `failed` with `processing_error` while keeping any already-written normal screenshot usable.
 - Cortex ingest is deferred until the row is `ready` and either `long_screenshot_url` or `screenshot_url` exists. The dashboard calls `ingestReadyBookmarksToCortex()` in throttled batches and tracks progress in `bookmarks.cortex_status`.
 - The dashboard uses bounded polling for queued/processing bookmarks instead of storing private bookmark data in LocalStorage.
@@ -425,7 +425,7 @@ Flow:
 6. Resolve design data from known domain database or deterministic fallback.
 7. Insert bookmark row with `processing_status = "queued"`.
 8. Enqueue `bookmark_processing_jobs`.
-9. Trigger the GitHub Actions processor best-effort.
+9. Return immediately; Oracle polls and processes the queued job.
 10. Revalidate `/`.
 
 ### Bookmark Update Flow
@@ -439,7 +439,7 @@ Flow:
 3. If URL changed, clear stale normal and long preview fields and set `processing_status = "queued"`.
 4. If URL did not change, preserve screenshots, palette, fonts, and summary where possible.
 5. Update the owner-scoped row.
-6. If URL changed, enqueue a new processing job and trigger the processor best-effort.
+6. If URL changed, enqueue a new processing job for Oracle.
 7. Revalidate `/`.
 
 ### Bookmark Delete Flow
@@ -484,15 +484,15 @@ Module: `src/lib/metadata.ts`.
 
 Module: `src/lib/data.ts`.
 
-Current bookmark previews are generated by `processor/process-bookmarks.mjs`:
+Current bookmark previews are generated by Oracle:
 
-- Uses Playwright Chromium with a default `1440x900` viewport.
+- Uses browser screenshot capture with a default desktop viewport.
 - Captures a normal top-viewport screenshot, compresses it to WebP capped by `MAX_WEBP_HEIGHT=900`, uploads it to the public `bookmark-screenshots` storage bucket, and stores it in `bookmarks.screenshot_url`.
 - Captures a long full-page screenshot, compresses it to WebP capped by `LONG_SCREENSHOT_MAX_WEBP_HEIGHT=4000`, uploads it to the same bucket, and stores it in `bookmarks.long_screenshot_url`.
-- Dashboard cards, folder cards, bookmark detail, manual AI refresh, and visual facts prefer `long_screenshot_url` and fall back to `screenshot_url`.
+- Dashboard cards, folder cards, bookmark detail, and Cortex ingest prefer `long_screenshot_url` and fall back to `screenshot_url`.
 - Onboarding intentionally waits for and displays only `screenshot_url`, so users see the normal 16:9/top-viewport preview during first-run completion.
 
-`getMicrolinkPreviewData(url)` remains a legacy helper in `src/lib/data.ts` for Microlink screenshot/palette fetches, but the queued bookmark processor is the current screenshot path for newly saved bookmarks.
+`getMicrolinkPreviewData(url)` remains a legacy helper in `src/lib/data.ts` for Microlink screenshot/palette fetches, but Oracle is the current screenshot path for newly saved bookmarks.
 
 `SCREENSHOT_REFRESH_INTERVAL_MS`:
 
@@ -730,7 +730,7 @@ Modules:
 
 | Function | Purpose | Side effects |
 | --- | --- | --- |
-| `createBookmark(formData)` | Create bookmark and enqueue metadata/screenshot enrichment | Inserts `bookmarks`, enqueues processor work, revalidates `/` |
+| `createBookmark(formData)` | Create bookmark and enqueue metadata/screenshot enrichment | Inserts `bookmarks`, enqueues Oracle work, revalidates `/` |
 | `updateBookmark(formData)` | Update bookmark and refresh metadata if URL changes | Updates `bookmarks`, revalidates `/` |
 | `deleteBookmark(id)` | Delete owner-scoped bookmark | Deletes `bookmarks`, revalidates `/` |
 | `updateProfile(formData)` | Upsert profile and optional avatar | Uploads/removes avatar, upserts `profiles`, revalidates routes |
@@ -820,7 +820,7 @@ Nyabag uses a mix of optimistic UI and server-confirmed updates.
 
 ### Bookmarks
 
-- Bookmark creation uses pending UI while asynchronous processor work produces metadata and the stored screenshot.
+- Bookmark creation uses pending UI while asynchronous Oracle work produces metadata and the stored screenshot.
 - Delete is optimistic in `useBookmarks`.
 - On delete failure, previous bookmark state is restored.
 
@@ -857,26 +857,27 @@ Confirm exact names in `src/lib/supabase/server.ts` and `src/lib/supabase/client
 Used for current bookmark previews:
 
 - Normal top-viewport Playwright screenshots for onboarding.
-- Long full-page Playwright screenshots for app previews, AI metadata, and visual facts.
+- Long full-page Playwright screenshots for app previews and Cortex ingest.
 - Screenshot-derived color palettes.
 
 Important operational note:
 
-- The GitHub Actions workflow runs on dispatch and every 5 minutes as a fallback.
+- Oracle polls the Supabase job queue and owns retry/ready/failed transitions.
 - Nyabag stores normal and long screenshot URLs plus refreshed timestamps so screenshots do not need to be regenerated on every login.
 
 ### Cortex Engine
 
 Hosted Cortex is the external active bookmark search backend. Nyabag keeps Cortex separate from this repo and only calls it from server-side code.
 
-- `src/lib/cortex.ts` reads server-only `CORTEX_API_URL`.
+- `src/lib/cortex.ts` reads server-only `CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY`.
 - `src/lib/cortex-actions.ts` posts `nyabagBookmarkId`, `userId`, `url`, `title`, `summary`, and a non-null screenshot URL to Cortex `/ingest` only after bookmark processing is ready.
 - `deleteBookmark(id)` best-effort calls Cortex `DELETE /memories/bookmark/{nyabagBookmarkId}` with `CORTEX_INTERNAL_API_KEY` after the Supabase row is deleted, so stale Neon rows do not consume search result slots.
 - `bookmarks.cortex_status`, `cortex_error`, `cortex_memory_id`, and `cortex_ingested_at` track deferred ingest separately from legacy semantic search columns.
-- Active bookmark search calls Cortex `/search` and uses returned `nyabagBookmarkId` values as the authoritative ranking source.
-- Returned Cortex IDs are filtered through owner-scoped Supabase queries and then reordered to Cortex order, so Cortex cannot expose another user's bookmarks.
+- Active bookmark search calls internal-token-authenticated Cortex `/search` with `userId` and uses returned `nyabagBookmarkId` values as the authoritative ranking source.
+- Cortex filters by `userId` before ranking; returned Cortex IDs are also filtered through owner-scoped Supabase queries and then reordered to Cortex order.
 - If Cortex is missing or unavailable, bookmark creation still works and active search shows a Cortex-unavailable state instead of falling back to the retired local/Gemini search stack.
-- Legacy Supabase search objects such as lexical RPCs, embedding tables, vector indexes, visual-memory tables, and semantic status columns remain until a future explicit cleanup migration.
+- Nyabag no longer runs app-side Gemini bookmark enrichment. The retired `bookmark_ai_metadata`, `bookmark_visual_facts`, and bookmark `ai_*` fields are removed by migration; Cortex owns AI memory/search.
+- Legacy Supabase search objects such as lexical RPCs, embedding tables, vector indexes, and semantic status columns may remain until a future explicit cleanup migration.
 
 ### Provider Embeds
 
@@ -913,7 +914,7 @@ http://localhost:3000
    - `canvas-media`
    - `profile-avatars`
 4. Add Supabase environment variables to `.env.local`.
-5. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` for active bookmark search and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex delete cleanup.
+5. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
 6. Restart the dev server.
 
 ### Vercel Deployment
@@ -948,8 +949,8 @@ Current lint warnings:
    - Impact: lint warnings only.
    - Reasonable for external, dynamic, or signed media, but should be reviewed case-by-case.
 
-3. **Bookmark processor dependency**
-   - Screenshot and palette extraction depend on the GitHub Actions processor, Playwright, Supabase Storage, and external site availability.
+3. **Oracle processing dependency**
+   - Screenshot and palette extraction depend on Oracle, Supabase Storage, and external site availability.
    - Nyabag stores normal and long screenshot URLs/refreshed timestamps, but new bookmarks and changed URLs still need a successful processor run.
 
 4. **Social embeds are provider-dependent**

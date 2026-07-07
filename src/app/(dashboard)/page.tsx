@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BookmarkGrid } from "@/components/bookmarks/BookmarkGrid";
 import type { Bookmark } from "@/lib/types";
-import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
 import { getUserProfile } from "@/lib/profile";
 import { timeAsync } from "@/lib/perf";
 
@@ -45,15 +44,7 @@ export default async function DashboardPage() {
       );
     }
 
-    const initialBookmarks = user
-      ? await timeAsync("dashboard: attach AI metadata", async () => {
-          return attachAiMetadataToBookmarks(
-            supabase,
-            (bookmarks ?? []) as Bookmark[],
-            user.id
-          );
-        })
-      : ((bookmarks ?? []) as Bookmark[]);
+    const initialBookmarks = (bookmarks ?? []) as Bookmark[];
 
     return (
       <BookmarkGrid

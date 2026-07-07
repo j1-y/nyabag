@@ -9,12 +9,10 @@
     "lint": "eslint",
     "check:colors": "node scripts/check-colors.mjs",
     "check:design-system": "node scripts/check-design-system.mjs",
-    "check:bookmark-processor": "node scripts/check-bookmark-processor.mjs",
     "telegram:set-webhook": "node scripts/set-telegram-webhook.mjs",
     "telegram:check-webhook": "node scripts/check-telegram-webhook.mjs"
   },
   "dependencies": {
-    "@google/genai": "^2.8.0",
     "@hugeicons/core-free-icons": "^4.2.2",
     "@hugeicons/react": "^1.1.9",
     "@radix-ui/react-dialog": "^1.1.15",

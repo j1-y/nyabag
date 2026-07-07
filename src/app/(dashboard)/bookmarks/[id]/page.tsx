@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getBookmarkAiMetadata } from "@/lib/bookmarks/ai-metadata";
 import { BookmarkDetailPage } from "@/components/bookmarks/BookmarkDetailPage";
 import type { Bookmark } from "@/lib/types";
 
@@ -25,8 +24,5 @@ export default async function BookmarkPage({
 
   if (error || !data) notFound();
 
-  const aiMetadata = await getBookmarkAiMetadata(supabase, id, user.id);
-  const bookmark = { ...(data as Bookmark), ai_metadata: aiMetadata };
-
-  return <BookmarkDetailPage bookmark={bookmark} />;
+  return <BookmarkDetailPage bookmark={data as Bookmark} />;
 }

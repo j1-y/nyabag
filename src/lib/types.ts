@@ -42,9 +42,6 @@ export type Bookmark = {
   cortex_ingested_at?: string | null;
   enrichment_started_at: string | null;
   enrichment_finished_at: string | null;
-  ai_description?: string | null;
-  ai_tags?: string[];
-  ai_patterns?: string[];
   save_reason?: string | null;
   last_opened_at?: string | null;
   search_score?: number;
@@ -57,7 +54,6 @@ export type Bookmark = {
   updated_at: string;
   folder_id?: string | null;
   folder?: BookmarkFolder | null;
-  ai_metadata?: BookmarkAiMetadata | null;
 };
 
 export type CortexStatus = "pending" | "processing" | "ready" | "failed" | "skipped";
@@ -106,29 +102,6 @@ export type UserOnboarding = {
   focus_area: OnboardingFocusArea | "";
   current_step: OnboardingStep;
   completed_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type BookmarkAiStatus = "pending" | "completed" | "failed";
-
-export type BookmarkAiMetadata = {
-  id: string;
-  bookmark_id: string;
-  user_id: string;
-  page_type: string;
-  industry: string;
-  visual_style: string[];
-  ui_patterns: string[];
-  components: string[];
-  suggested_tags: string[];
-  suggested_folder: string;
-  design_context: string;
-  confidence: number;
-  model_name: string;
-  raw_response?: unknown | null;
-  error?: string | null;
-  status: BookmarkAiStatus;
   created_at: string;
   updated_at: string;
 };
