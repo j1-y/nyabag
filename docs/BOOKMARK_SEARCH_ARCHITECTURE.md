@@ -18,23 +18,25 @@ There is no lexical, Gemini embedding, visual-memory, temporal, or fusion fallba
 
 ## Server-Only Boundary
 
-`CORTEX_API_URL` is server-only and must not use the `NEXT_PUBLIC_` prefix.
+`CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY` are server-only and must not use the `NEXT_PUBLIC_` prefix.
 
 `src/lib/cortex.ts` imports `server-only` and exposes:
 
-- `ingestBookmarkToCortex(payload)`: best-effort `POST /ingest` for create-time bookmark ingestion.
+- `ingestBookmarkToCortex(payload)`: server-only `POST /ingest` helper that refuses missing screenshot URLs.
+- `deleteBookmarkFromCortex(payload)`: best-effort `DELETE /memories/bookmark/{id}` cleanup helper for deleted bookmarks.
+- `ingestReadyBookmarksToCortex(limit)`: authenticated server action that posts ready bookmarks with screenshots to Cortex in small batches.
 - `searchCortex({ query, userId, limit })`: user-scoped `GET /search` for active search.
 - `isCortexConfigured()`: environment check used by server actions.
 
-Both Cortex calls use `cache: "no-store"`. Ingest failures are logged and never block bookmark creation.
+Both Cortex calls use `cache: "no-store"`. Ingest failures are logged and never block bookmark creation. Delete cleanup failures are logged and never block bookmark deletion.
 
 Production safety requirement: Cortex `/search` must honor `userId` server-side. Nyabag still owner-filters returned IDs through Supabase, but that is a final guard, not a substitute for user-scoped retrieval inside Cortex.
 
 ## Ingest Scope
 
-Cortex ingest is create-only in this pass.
+Cortex ingest is deferred until screenshot processing is complete.
 
-Covered create surfaces:
+Covered create surfaces all insert normal bookmarks first, then rely on deferred ready-bookmark ingest:
 
 - Dashboard create.
 - Onboarding first bookmark.
@@ -42,7 +44,14 @@ Covered create surfaces:
 - Telegram queued saves.
 - Extension capture creates.
 
-Bookmark updates, deletes, screenshot refreshes, and processor enrichment updates do not sync to Cortex yet.
+Bookmark URL changes, screenshot refreshes, and processor retries reset `cortex_status` to `pending`, so the next ready screenshot can be ingested again. Title/tag/note-only edits do not reset Cortex state. Deletes best-effort call Cortex to remove matching `cortex_memories` and `cortex_embeddings` rows by Nyabag bookmark id plus user id.
+
+Ingest tracking lives on `bookmarks`:
+
+- `cortex_status`: `pending`, `processing`, `ready`, `failed`, or `skipped`.
+- `cortex_error`: safe truncated failure detail.
+- `cortex_memory_id`: Cortex memory id when returned.
+- `cortex_ingested_at`: successful ingest timestamp.
 
 ## Public Payload
 
@@ -90,7 +99,9 @@ git diff --check
 Manual smoke:
 
 - Set `CORTEX_API_URL` in `.env.local` and restart the dev server.
-- Create a bookmark and confirm Cortex receives `POST /ingest`.
+- Create a bookmark and confirm Cortex does not receive `POST /ingest` while screenshot fields are null.
+- Let the processor mark the bookmark ready with `long_screenshot_url` or `screenshot_url`, then open/refresh the dashboard and confirm Cortex receives `POST /ingest`.
+- Delete an ingested bookmark and confirm Cortex receives `DELETE /memories/bookmark/{id}` with the internal bearer token.
 - Search a semantic query and confirm cards follow Cortex result order.
 - Confirm Cortex Render logs show `/search` requests receiving the authenticated `userId`.
 - Break `CORTEX_API_URL` and confirm active search shows the unavailable state instead of falling back to local results.

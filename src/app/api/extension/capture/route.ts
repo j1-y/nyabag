@@ -6,7 +6,6 @@ import { validatePublicHttpUrl } from "@/lib/security/url-safety";
 import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import { getDesignData, getDomain } from "@/lib/data";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
-import { ingestBookmarkToCortex } from "@/lib/cortex";
 import { extensionCors, handleExtensionPreflight } from "@/lib/extension/cors";
 
 export const dynamic = "force-dynamic";
@@ -280,15 +279,6 @@ export async function POST(request: NextRequest) {
 
     await triggerProcessorBestEffort();
   }
-
-  await ingestBookmarkToCortex({
-    nyabagBookmarkId: bookmark.id,
-    userId: auth.user.id,
-    url: bookmark.url,
-    title: bookmark.title,
-    summary: bookmark.summary,
-    screenshotUrl: bookmark.screenshot_url,
-  });
 
   return extensionCors(
     NextResponse.json({

@@ -66,6 +66,10 @@ ALTER TABLE bookmarks
   ADD COLUMN IF NOT EXISTS semantic_status TEXT NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS semantic_error TEXT,
   ADD COLUMN IF NOT EXISTS semantic_processed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS cortex_status TEXT NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS cortex_error TEXT,
+  ADD COLUMN IF NOT EXISTS cortex_memory_id TEXT,
+  ADD COLUMN IF NOT EXISTS cortex_ingested_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS last_opened_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS search_vector TSVECTOR;
 
@@ -81,6 +85,8 @@ ALTER TABLE bookmarks
   DROP CONSTRAINT IF EXISTS bookmarks_save_reason_check,
   DROP CONSTRAINT IF EXISTS bookmarks_semantic_status_check,
   DROP CONSTRAINT IF EXISTS bookmarks_semantic_error_check,
+  DROP CONSTRAINT IF EXISTS bookmarks_cortex_status_check,
+  DROP CONSTRAINT IF EXISTS bookmarks_cortex_error_check,
   ADD CONSTRAINT bookmarks_url_check CHECK (char_length(url) <= 2048),
   ADD CONSTRAINT bookmarks_title_check CHECK (char_length(title) <= 255),
   ADD CONSTRAINT bookmarks_screenshot_path_check CHECK (screenshot_path IS NULL OR char_length(screenshot_path) <= 1024),
@@ -91,7 +97,9 @@ ALTER TABLE bookmarks
   ADD CONSTRAINT bookmarks_ai_description_check CHECK (ai_description IS NULL OR char_length(ai_description) <= 1200),
   ADD CONSTRAINT bookmarks_save_reason_check CHECK (save_reason IS NULL OR char_length(save_reason) <= 500),
   ADD CONSTRAINT bookmarks_semantic_status_check CHECK (semantic_status IN ('pending', 'processing', 'ready', 'failed', 'skipped')),
-  ADD CONSTRAINT bookmarks_semantic_error_check CHECK (semantic_error IS NULL OR char_length(semantic_error) <= 500);
+  ADD CONSTRAINT bookmarks_semantic_error_check CHECK (semantic_error IS NULL OR char_length(semantic_error) <= 500),
+  ADD CONSTRAINT bookmarks_cortex_status_check CHECK (cortex_status IN ('pending', 'processing', 'ready', 'failed', 'skipped')),
+  ADD CONSTRAINT bookmarks_cortex_error_check CHECK (cortex_error IS NULL OR char_length(cortex_error) <= 500);
 
 DROP TRIGGER IF EXISTS bookmarks_updated_at ON bookmarks;
 CREATE TRIGGER bookmarks_updated_at
@@ -105,6 +113,10 @@ CREATE INDEX IF NOT EXISTS bookmarks_user_created_at_idx ON bookmarks(user_id, c
 CREATE INDEX IF NOT EXISTS idx_bookmarks_user_url ON bookmarks(user_id, url);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_processing_status ON bookmarks(processing_status);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_semantic_status ON bookmarks(semantic_status);
+CREATE INDEX IF NOT EXISTS idx_bookmarks_cortex_ready_ingest
+  ON bookmarks(user_id, cortex_status, updated_at DESC)
+  WHERE processing_status = 'ready'
+    AND (screenshot_url IS NOT NULL OR long_screenshot_url IS NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_search_vector ON bookmarks USING GIN(search_vector);
 
 CREATE OR REPLACE FUNCTION bookmark_hostname(bookmark_url TEXT)

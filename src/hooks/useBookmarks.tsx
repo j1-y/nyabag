@@ -14,6 +14,7 @@ import {
 } from "react";
 import type { Bookmark, CortexBookmarkSearchPayload } from "@/lib/types";
 import { deleteBookmark, getBookmarks, getProcessingBookmarks, searchCortexBookmarks } from "@/lib/actions";
+import { ingestReadyBookmarksToCortex } from "@/lib/cortex-actions";
 
 export type PendingBookmark = {
   id: string;
@@ -68,6 +69,7 @@ const DASHBOARD_REFRESH_INTERVAL_MS = 15_000;
 const DASHBOARD_FOCUS_REFRESH_MIN_MS = 5_000;
 const CORTEX_SEARCH_MIN_QUERY_LENGTH = 2;
 const CORTEX_SEARCH_DEBOUNCE_MS = 400;
+const CORTEX_INGEST_THROTTLE_MS = 30_000;
 
 function getPreviousSearchResults(state: CortexSearchState): Bookmark[] {
   if (state.status === "success") return state.payload.bookmarks;
@@ -83,9 +85,22 @@ function getBookmarkSnapshot(bookmarks: Bookmark[]) {
       bookmark.processing_status,
       bookmark.screenshot_url ?? "",
       bookmark.long_screenshot_url ?? "",
+      bookmark.cortex_status ?? "",
+      bookmark.cortex_error ?? "",
+      bookmark.cortex_memory_id ?? "",
+      bookmark.cortex_ingested_at ?? "",
       bookmark.ai_metadata?.updated_at ?? "",
     ].join(":"))
     .join("|");
+}
+
+function isReadyForCortexIngest(bookmark: Bookmark) {
+  const cortexStatus = bookmark.cortex_status ?? "pending";
+  return (
+    bookmark.processing_status === "ready" &&
+    Boolean(bookmark.long_screenshot_url ?? bookmark.screenshot_url) &&
+    (cortexStatus === "pending" || cortexStatus === "failed" || cortexStatus === "skipped")
+  );
 }
 
 export function BookmarksProvider({
@@ -116,6 +131,8 @@ export function BookmarksProvider({
   const refreshInFlightRef = useRef(false);
   const lastRefreshAtRef = useRef(0);
   const searchRequestIdRef = useRef(0);
+  const cortexIngestInFlightRef = useRef(false);
+  const lastCortexIngestAtRef = useRef(0);
 
   const setPersistentActiveFilter = useCallback((filter: "all" | "recent") => {
     setActiveFilter(filter);
@@ -130,6 +147,17 @@ export function BookmarksProvider({
     bookmark.processing_status === "queued" ||
     bookmark.processing_status === "processing"
   );
+
+  const cortexIngestSnapshot = useMemo(() => {
+    return bookmarks
+      .filter(isReadyForCortexIngest)
+      .map((bookmark) => [
+        bookmark.id,
+        bookmark.cortex_status ?? "pending",
+        bookmark.long_screenshot_url ?? bookmark.screenshot_url ?? "",
+      ].join(":"))
+      .join("|");
+  }, [bookmarks]);
 
   const refreshBookmarks = useCallback(async () => {
     if (refreshInFlightRef.current) return;
@@ -208,6 +236,35 @@ export function BookmarksProvider({
       if (timeout) window.clearTimeout(timeout);
     };
   }, [hasActiveProcessing]);
+
+  useEffect(() => {
+    if (!cortexIngestSnapshot) return;
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+    if (cortexIngestInFlightRef.current) return;
+
+    const now = Date.now();
+    if (now - lastCortexIngestAtRef.current < CORTEX_INGEST_THROTTLE_MS) return;
+
+    cortexIngestInFlightRef.current = true;
+    lastCortexIngestAtRef.current = now;
+
+    void ingestReadyBookmarksToCortex(3)
+      .then((result) => {
+        if (!result.success) return;
+        const changed =
+          result.data.attempted +
+          result.data.ingested +
+          result.data.failed +
+          result.data.skipped;
+        if (changed > 0) void refreshBookmarks();
+      })
+      .catch((error) => {
+        console.warn("[cortex] Ready bookmark ingest trigger failed:", error);
+      })
+      .finally(() => {
+        cortexIngestInFlightRef.current = false;
+      });
+  }, [cortexIngestSnapshot, refreshBookmarks]);
 
   useEffect(() => {
     const q = search.trim();

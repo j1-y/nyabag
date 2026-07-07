@@ -75,3 +75,11 @@
 ## Decision: Cortex is the active bookmark search authority
 
 - Reason: Hosted Cortex replaces the app-side hybrid search stack. Active non-empty dashboard searches call Cortex `/search`, owner-filter returned `nyabagBookmarkId` values through Supabase, and render results in Cortex order. Empty search keeps local bookmark/tag/recent filtering. Cortex outages produce an unavailable search state rather than a lexical/Gemini/visual fallback.
+
+## Decision: Cortex ingest waits for ready screenshots
+
+- Reason: Cortex vision ingest requires a real screenshot URL, but bookmark creation rows start with null screenshot fields while Oracle/processor work is queued. Nyabag now tracks ingest with dedicated `cortex_*` bookmark columns and posts to Cortex only after `processing_status = "ready"` and `long_screenshot_url` or `screenshot_url` exists.
+
+## Decision: Bookmark deletes clean up Cortex best-effort
+
+- Reason: Nyabag owner-filters Cortex search results through Supabase, so deleted bookmark rows do not render, but stale Neon memory and embedding rows can still waste Cortex ranking slots. Deletion now removes Supabase first, then best-effort calls an internal-key-protected Cortex delete endpoint.

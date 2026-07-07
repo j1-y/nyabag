@@ -15,9 +15,10 @@ Hosted Cortex search:
 
 ```text
 CORTEX_API_URL=https://your-cortex-render-url.onrender.com
+CORTEX_INTERNAL_API_KEY=shared-server-secret
 ```
 
-Nyabag sends newly created bookmarks to Cortex `/ingest` and uses Cortex `/search` as the active bookmark search backend. `CORTEX_API_URL` is server-only and must not be prefixed with `NEXT_PUBLIC_`. Bookmark creation still succeeds if Cortex is unavailable; active search shows a small unavailable state instead of falling back to the old local/Gemini search stack.
+Nyabag sends bookmarks to Cortex `/ingest` only after Oracle/processor work marks them ready and a screenshot URL exists. Cortex `/search` is the active bookmark search backend, and bookmark deletion best-effort calls Cortex to remove matching Neon memory and embedding rows. `CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY` are server-only and must not be prefixed with `NEXT_PUBLIC_`. Bookmark creation/deletion still succeeds if Cortex is unavailable; active search shows a small unavailable state instead of falling back to the old local/Gemini search stack.
 
 Expected support routes:
 

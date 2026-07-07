@@ -1,6 +1,6 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-07-06
+Last updated: 2026-07-07
 
 Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated workspace lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
@@ -275,6 +275,10 @@ Important fields:
 | `summary` | Metadata description summary |
 | `metadata_refreshed_at` | Metadata scrape timestamp |
 | `note` | User note |
+| `cortex_status` | Deferred Cortex ingest state, separate from legacy semantic status |
+| `cortex_error` | Safe truncated Cortex ingest failure detail |
+| `cortex_memory_id` | Cortex memory id returned after successful ingest |
+| `cortex_ingested_at` | Successful Cortex ingest timestamp |
 
 Important constraints:
 
@@ -282,6 +286,7 @@ Important constraints:
 - Title max length: 255.
 - Summary max length: 1000.
 - Note max length: 2000.
+- Cortex status must be `pending`, `processing`, `ready`, `failed`, or `skipped`.
 - RLS restricts rows to `auth.uid() = user_id`.
 
 ### `profiles`
@@ -401,10 +406,10 @@ Used by:
 Performance lifecycle:
 - `createBookmark(formData)` inserts a basic bookmark row immediately and returns it with `processing_status = "queued"`.
 - A `bookmark_processing_jobs` row is created for the same bookmark.
-- The app best-effort sends the inserted bookmark to hosted Cortex `/ingest` when `CORTEX_API_URL` is configured; Cortex failures are logged and never block creation.
 - The app best-effort triggers the GitHub Actions processor through `workflow_dispatch`; a 5-minute cron fallback also runs the processor.
 - The standalone `processor/` worker uses Playwright for one normal top-viewport screenshot plus one long full-page screenshot, Sharp for WebP compression, and Supabase Storage for uploads.
 - The normal screenshot is written first so onboarding can complete; completed long-screenshot enrichment marks the row `ready`. Failures mark it `failed` with `processing_error` while keeping any already-written normal screenshot usable.
+- Cortex ingest is deferred until the row is `ready` and either `long_screenshot_url` or `screenshot_url` exists. The dashboard calls `ingestReadyBookmarksToCortex()` in throttled batches and tracks progress in `bookmarks.cortex_status`.
 - The dashboard uses bounded polling for queued/processing bookmarks instead of storing private bookmark data in LocalStorage.
 
 Flow:
@@ -420,9 +425,8 @@ Flow:
 6. Resolve design data from known domain database or deterministic fallback.
 7. Insert bookmark row with `processing_status = "queued"`.
 8. Enqueue `bookmark_processing_jobs`.
-9. Send a best-effort Cortex ingest request when configured.
-10. Trigger the GitHub Actions processor best-effort.
-11. Revalidate `/`.
+9. Trigger the GitHub Actions processor best-effort.
+10. Revalidate `/`.
 
 ### Bookmark Update Flow
 
@@ -445,9 +449,12 @@ Main action: `deleteBookmark(id)`.
 Flow:
 
 1. Resolve authenticated user.
-2. Delete bookmark by `id` and `user_id`.
-3. If no rows were affected, distinguish between not found and wrong owner where possible.
-4. Revalidate `/`.
+2. Read screenshot paths and `cortex_memory_id` for cleanup.
+3. Delete bookmark by `id` and `user_id`.
+4. If no rows were affected, distinguish between not found and wrong owner where possible.
+5. Revalidate `/`.
+6. Best-effort call Cortex to delete matching Neon memory and embedding rows by bookmark id plus user id.
+7. Remove stored normal and long screenshots.
 
 The client currently performs optimistic delete in `useBookmarks`, then rolls back on failure.
 
@@ -863,7 +870,9 @@ Important operational note:
 Hosted Cortex is the external active bookmark search backend. Nyabag keeps Cortex separate from this repo and only calls it from server-side code.
 
 - `src/lib/cortex.ts` reads server-only `CORTEX_API_URL`.
-- Bookmark creation posts `nyabagBookmarkId`, `userId`, `url`, `title`, `summary`, and `screenshotUrl` to Cortex `/ingest` after the Supabase insert/job succeeds.
+- `src/lib/cortex-actions.ts` posts `nyabagBookmarkId`, `userId`, `url`, `title`, `summary`, and a non-null screenshot URL to Cortex `/ingest` only after bookmark processing is ready.
+- `deleteBookmark(id)` best-effort calls Cortex `DELETE /memories/bookmark/{nyabagBookmarkId}` with `CORTEX_INTERNAL_API_KEY` after the Supabase row is deleted, so stale Neon rows do not consume search result slots.
+- `bookmarks.cortex_status`, `cortex_error`, `cortex_memory_id`, and `cortex_ingested_at` track deferred ingest separately from legacy semantic search columns.
 - Active bookmark search calls Cortex `/search` and uses returned `nyabagBookmarkId` values as the authoritative ranking source.
 - Returned Cortex IDs are filtered through owner-scoped Supabase queries and then reordered to Cortex order, so Cortex cannot expose another user's bookmarks.
 - If Cortex is missing or unavailable, bookmark creation still works and active search shows a Cortex-unavailable state instead of falling back to the retired local/Gemini search stack.
@@ -904,7 +913,7 @@ http://localhost:3000
    - `canvas-media`
    - `profile-avatars`
 4. Add Supabase environment variables to `.env.local`.
-5. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` for active bookmark search.
+5. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` for active bookmark search and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex delete cleanup.
 6. Restart the dev server.
 
 ### Vercel Deployment

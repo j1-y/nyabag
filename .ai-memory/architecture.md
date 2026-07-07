@@ -32,7 +32,7 @@
 - Folder mutations: `src/lib/folder-actions.ts`
 - Onboarding mutations: `src/lib/onboarding-actions.ts`
 - Admin mutations: `src/lib/admin/actions.ts`
-- Hosted Cortex client and active search boundary: `src/lib/cortex.ts`
+- Hosted Cortex client, active search, and best-effort delete cleanup boundary: `src/lib/cortex.ts`; deferred ready-bookmark ingest action: `src/lib/cortex-actions.ts`
 - Bookmark enrichment and processor dispatch: `src/lib/bookmarks/*`
 
 ## Storage and schema
@@ -45,7 +45,8 @@
 ## Processing pipeline
 
 - Bookmark creation inserts a row first, then triggers enrichment and processor work.
-- Bookmark creation also sends a best-effort server-only Cortex `/ingest` request when `CORTEX_API_URL` is configured; Cortex failures must not block creation.
+- Cortex ingest is deferred until a bookmark has `processing_status = "ready"` and either `long_screenshot_url` or `screenshot_url`; dashboard state calls `ingestReadyBookmarksToCortex()` in small throttled batches.
+- Bookmark deletion removes the Supabase row first, then best-effort calls Cortex to delete matching Neon `cortex_memories` and `cortex_embeddings` rows by bookmark id plus user id.
 - The bookmark processor lives under `processor/*`.
 - Screenshot and metadata enrichment are intentionally best-effort and must remain fallback-safe.
 - Bookmark processing captures two screenshots per URL job: a normal top-viewport WebP stored in `screenshot_url` for onboarding, then a long full-page WebP stored in `long_screenshot_url` for dashboard cards, folder cards, detail pages, AI metadata, and visual facts. App display falls back to `screenshot_url` when `long_screenshot_url` is missing.
@@ -56,6 +57,8 @@
 - Empty search still uses the loaded local bookmark list with tag and recent filters.
 - `CORTEX_API_URL` is server-only and required for active search. If missing or broken, the active search UI shows a Cortex-unavailable state.
 - Cortex returns ranked `nyabagBookmarkId` values only. Nyabag must owner-filter those IDs through Supabase and return bookmark rows in Cortex order.
+- `bookmarks.cortex_status` tracks deferred ingest separately from legacy `semantic_status`.
+- `CORTEX_INTERNAL_API_KEY` is server-only and required for destructive Cortex cleanup endpoints.
 - Legacy Supabase search objects remain in `supabase/schema.sql` until a future explicit cleanup migration; treat them as inactive leftovers, not active app architecture.
 - Full operational details live in `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`.
 

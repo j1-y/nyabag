@@ -9,6 +9,22 @@ export type CortexBookmarkIngestPayload = {
   screenshotUrl?: string | null;
 };
 
+export type CortexBookmarkIngestResponse = {
+  memoryId?: string;
+  autoTags?: string[];
+};
+
+export type CortexBookmarkDeletePayload = {
+  nyabagBookmarkId: string;
+  userId: string;
+  memoryId?: string | null;
+};
+
+export type CortexBookmarkDeleteResponse = {
+  deletedMemories: number;
+  deletedEmbeddings: number;
+};
+
 export type CortexSearchResult = {
   memoryId?: string;
   nyabagBookmarkId?: string;
@@ -37,8 +53,16 @@ function getCortexApiUrl() {
   return process.env.CORTEX_API_URL?.trim().replace(/\/+$/, "") || "";
 }
 
+let hasLoggedMissingCortexApiUrl = false;
+let hasLoggedMissingCortexInternalKey = false;
+const CORTEX_DELETE_TIMEOUT_MS = 5_000;
+
 export function isCortexConfigured() {
   return Boolean(getCortexApiUrl());
+}
+
+function getCortexInternalApiKey() {
+  return process.env.CORTEX_INTERNAL_API_KEY?.trim() || "";
 }
 
 function shortCortexError(error: unknown) {
@@ -46,12 +70,27 @@ function shortCortexError(error: unknown) {
   return message.slice(0, 500);
 }
 
+async function safeResponseText(response: Response) {
+  return (await response.text().catch(() => "")).slice(0, 500);
+}
+
 export async function ingestBookmarkToCortex(
   payload: CortexBookmarkIngestPayload
-): Promise<CortexSearchResponse | null> {
+): Promise<CortexBookmarkIngestResponse | null> {
   const apiUrl = getCortexApiUrl();
   if (!apiUrl) {
-    console.warn("[cortex] CORTEX_API_URL is not configured; skipping bookmark ingest.");
+    if (!hasLoggedMissingCortexApiUrl) {
+      console.warn("[cortex] CORTEX_API_URL is not configured; skipping bookmark ingest.");
+      hasLoggedMissingCortexApiUrl = true;
+    }
+    return null;
+  }
+
+  const screenshotUrl = payload.screenshotUrl?.trim();
+  if (!screenshotUrl) {
+    console.warn("[cortex] Skipping bookmark ingest because screenshot URL is missing.", {
+      bookmarkId: payload.nyabagBookmarkId,
+    });
     return null;
   }
 
@@ -67,19 +106,71 @@ export async function ingestBookmarkToCortex(
         url: payload.url,
         title: payload.title ?? null,
         summary: payload.summary ?? null,
-        screenshotUrl: payload.screenshotUrl ?? null,
+        screenshotUrl,
       }),
       cache: "no-store",
     });
 
     if (!response.ok) {
-      console.warn("[cortex] Bookmark ingest failed:", response.status, await response.text().catch(() => ""));
+      console.warn("[cortex] Bookmark ingest failed:", response.status, await safeResponseText(response));
       return null;
     }
 
-    return (await response.json().catch(() => null)) as CortexSearchResponse | null;
+    return (await response.json().catch(() => null)) as CortexBookmarkIngestResponse | null;
   } catch (error) {
     console.warn("[cortex] Bookmark ingest failed:", shortCortexError(error));
+    return null;
+  }
+}
+
+export async function deleteBookmarkFromCortex(
+  payload: CortexBookmarkDeletePayload
+): Promise<CortexBookmarkDeleteResponse | null> {
+  const apiUrl = getCortexApiUrl();
+  if (!apiUrl) return null;
+
+  const internalApiKey = getCortexInternalApiKey();
+  if (!internalApiKey) {
+    if (!hasLoggedMissingCortexInternalKey) {
+      console.warn("[cortex] CORTEX_INTERNAL_API_KEY is not configured; skipping bookmark delete cleanup.");
+      hasLoggedMissingCortexInternalKey = true;
+    }
+    return null;
+  }
+
+  const bookmarkId = payload.nyabagBookmarkId.trim();
+  const userId = payload.userId.trim();
+  if (!bookmarkId || !userId) return null;
+
+  const params = new URLSearchParams({ userId });
+
+  try {
+    const response = await fetch(`${apiUrl}/memories/bookmark/${encodeURIComponent(bookmarkId)}?${params.toString()}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${internalApiKey}`,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(CORTEX_DELETE_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      console.warn("[cortex] Bookmark delete cleanup failed:", {
+        status: response.status,
+        body: await safeResponseText(response),
+        bookmarkId,
+        memoryId: payload.memoryId ?? null,
+      });
+      return null;
+    }
+
+    return (await response.json().catch(() => null)) as CortexBookmarkDeleteResponse | null;
+  } catch (error) {
+    console.warn("[cortex] Bookmark delete cleanup failed:", {
+      error: shortCortexError(error),
+      bookmarkId,
+      memoryId: payload.memoryId ?? null,
+    });
     return null;
   }
 }
@@ -109,7 +200,7 @@ export async function searchCortex({
     });
 
     if (!response.ok) {
-      console.warn("[cortex] Search failed:", response.status, await response.text().catch(() => ""));
+      console.warn("[cortex] Search failed:", response.status, await safeResponseText(response));
       return null;
     }
 

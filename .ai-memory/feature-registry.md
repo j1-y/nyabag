@@ -3,17 +3,17 @@
 ## Bookmarks
 
 - Feature: Bookmark dashboard
-- Description: Main saved-inspiration workspace with cards, filtering, pending creation, Cortex-backed active search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
-- Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/cortex.ts`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
+- Description: Main saved-inspiration workspace with cards, filtering, pending creation, deferred Cortex ingest for ready screenshots, best-effort Cortex cleanup on delete, Cortex-backed active search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
+- Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/cortex.ts`, `src/lib/cortex-actions.ts`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, bookmark tables, hosted Cortex, normal onboarding screenshot plus long app screenshot enrichment, optional processor jobs
 - Status: Active
 
 ## Bookmark Search
 
 - Feature: Cortex bookmark search
-- Description: Active bookmark search calls hosted Cortex, owner-filters returned `nyabagBookmarkId` values through Supabase, and returns cards in Cortex order. Empty search remains the local bookmark list with tag/recent filters.
-- Key Files: `src/lib/cortex.ts`, `src/lib/actions.ts`, `src/hooks/useBookmarks.tsx`, `src/components/bookmarks/BookmarkSearchBar.tsx`, `src/components/bookmarks/BookmarkGrid.tsx`, `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`, `supabase/schema.sql`
-- Dependencies: Supabase RLS, server-only `CORTEX_API_URL`, Cortex `/ingest` and `/search`
+- Description: Ready bookmarks with screenshots are ingested to hosted Cortex, and active bookmark search calls Cortex, owner-filters returned `nyabagBookmarkId` values through Supabase, and returns cards in Cortex order. Empty search remains the local bookmark list with tag/recent filters.
+- Key Files: `src/lib/cortex.ts`, `src/lib/cortex-actions.ts`, `src/lib/actions.ts`, `src/hooks/useBookmarks.tsx`, `src/components/bookmarks/BookmarkSearchBar.tsx`, `src/components/bookmarks/BookmarkGrid.tsx`, `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`, `supabase/schema.sql`
+- Dependencies: Supabase RLS, server-only `CORTEX_API_URL`, server-only `CORTEX_INTERNAL_API_KEY`, `bookmarks.cortex_status`, Cortex `/ingest`, `/search`, and delete cleanup
 - Status: Active
 
 ## Canvas

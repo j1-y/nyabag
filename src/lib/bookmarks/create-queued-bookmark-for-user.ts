@@ -3,7 +3,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getDesignData, getDomain } from "@/lib/data";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
-import { ingestBookmarkToCortex } from "@/lib/cortex";
 import type { Bookmark } from "@/lib/types";
 
 export type QueuedBookmarkSource = "telegram";
@@ -82,15 +81,6 @@ export async function createQueuedBookmarkForUser({
     await supabase.from("bookmarks").delete().eq("id", id).eq("user_id", userId);
     return { success: false, error: jobError.message };
   }
-
-  await ingestBookmarkToCortex({
-    nyabagBookmarkId: data.id,
-    userId,
-    url: data.url,
-    title: data.title,
-    summary: data.summary,
-    screenshotUrl: data.screenshot_url,
-  });
 
   await triggerProcessorBestEffort();
 

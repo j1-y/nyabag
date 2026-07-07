@@ -12,7 +12,7 @@ import { attachAiMetadataToBookmarks } from "@/lib/bookmarks/ai-metadata";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
 import { removeBookmarkScreenshot } from "@/lib/bookmarks/storage";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
-import { ingestBookmarkToCortex, isCortexConfigured, searchCortex, type CortexSearchResult } from "@/lib/cortex";
+import { deleteBookmarkFromCortex, isCortexConfigured, searchCortex, type CortexSearchResult } from "@/lib/cortex";
 import { timeAsync } from "@/lib/perf";
 import { PROFILE_AVATAR_BUCKET } from "@/lib/profile";
 import { getTelegramBotUrl, isTelegramConfigured } from "@/lib/telegram/config";
@@ -343,15 +343,6 @@ async function createBookmarkForUser({
 
   const job = await enqueueBookmarkProcessingJob(supabase, id, userId, url);
   if (!job.success) return { success: false, error: job.error };
-
-  await ingestBookmarkToCortex({
-    nyabagBookmarkId: data.id,
-    userId,
-    url: data.url,
-    title: data.title,
-    summary: data.summary,
-    screenshotUrl: data.screenshot_url,
-  });
 
   await triggerProcessorBestEffort("createBookmarkForUser");
 
@@ -883,6 +874,10 @@ export async function updateBookmark(
     metadata_refreshed_at: urlChanged ? null : existing?.metadata_refreshed_at ?? null,
     processing_status: urlChanged ? "queued" : undefined,
     processing_error: urlChanged ? null : undefined,
+    cortex_status: urlChanged ? "pending" : undefined,
+    cortex_error: urlChanged ? null : undefined,
+    cortex_memory_id: urlChanged ? null : undefined,
+    cortex_ingested_at: urlChanged ? null : undefined,
     enrichment_started_at: urlChanged ? null : undefined,
     enrichment_finished_at: urlChanged ? null : undefined,
   };
@@ -970,6 +965,10 @@ export async function refreshBookmarkScreenshot(
     .update({
       processing_status: "queued",
       processing_error: null,
+      cortex_status: "pending",
+      cortex_error: null,
+      cortex_memory_id: null,
+      cortex_ingested_at: null,
       enrichment_started_at: null,
       enrichment_finished_at: null,
     })
@@ -1060,6 +1059,10 @@ export async function retryBookmarkProcessing(
     .update({
       processing_status: "queued",
       processing_error: null,
+      cortex_status: "pending",
+      cortex_error: null,
+      cortex_memory_id: null,
+      cortex_ingested_at: null,
       enrichment_started_at: null,
       enrichment_finished_at: null,
     })
@@ -1141,7 +1144,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
 
     const { data: bookmarkForCleanup } = await supabase
       .from("bookmarks")
-      .select("screenshot_path, long_screenshot_path")
+      .select("screenshot_path, long_screenshot_path, cortex_memory_id")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -1176,6 +1179,11 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
     }
 
     revalidatePath("/");
+    await deleteBookmarkFromCortex({
+      nyabagBookmarkId: id,
+      userId: user.id,
+      memoryId: bookmarkForCleanup?.cortex_memory_id,
+    });
     await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path);
     await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.long_screenshot_path);
 

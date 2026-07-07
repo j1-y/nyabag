@@ -36,6 +36,10 @@ export type Bookmark = {
   note: string;
   processing_status: "queued" | "processing" | "ready" | "failed";
   processing_error: string | null;
+  cortex_status?: CortexStatus;
+  cortex_error?: string | null;
+  cortex_memory_id?: string | null;
+  cortex_ingested_at?: string | null;
   enrichment_started_at: string | null;
   enrichment_finished_at: string | null;
   ai_description?: string | null;
@@ -55,6 +59,8 @@ export type Bookmark = {
   folder?: BookmarkFolder | null;
   ai_metadata?: BookmarkAiMetadata | null;
 };
+
+export type CortexStatus = "pending" | "processing" | "ready" | "failed" | "skipped";
 
 export type TelegramConnectionStatus = "pending" | "connected" | "disabled";
 
