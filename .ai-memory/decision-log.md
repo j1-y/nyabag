@@ -91,3 +91,7 @@
 ## Decision: Oracle owns bookmark processing
 
 - Reason: Screenshot and metadata processing now belongs to the external Oracle worker. Nyabag keeps the Supabase job queue contract but removes the old local/GitHub `processor/` worker, GitHub Actions dispatch, and processor check script.
+
+## Decision: Extension web-session login uses allowlisted one-time codes
+
+- Reason: Chrome extension login should reuse a real Nyabag web session without exposing service-role keys or accepting arbitrary callback URLs. `/api/extension/auth/start` only accepts Chrome identity redirects for ids in `NYABAG_CHROME_EXTENSION_IDS`, stores only hashed short-lived exchange codes, and `/api/extension/auth/exchange` consumes each code once before returning a separate Supabase session for existing bearer-token extension APIs.

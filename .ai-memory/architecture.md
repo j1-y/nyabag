@@ -32,12 +32,14 @@
 - Folder mutations: `src/lib/folder-actions.ts`
 - Onboarding mutations: `src/lib/onboarding-actions.ts`
 - Admin mutations: `src/lib/admin/actions.ts`
+- Extension web-session auth: `src/app/api/extension/auth/start/route.ts`, `src/app/api/extension/auth/exchange/route.ts`, and `src/lib/extension/web-session-auth.ts`
 - Hosted Cortex client, active search, and best-effort delete cleanup boundary: `src/lib/cortex.ts`; deferred ready-bookmark ingest action: `src/lib/cortex-actions.ts`
 - Bookmark enrichment and processor dispatch: `src/lib/bookmarks/*`
 
 ## Storage and schema
 
 - Canonical schema: `supabase/schema.sql`
+- Extension auth handoff codes live in `extension_auth_codes`; only SHA-256 code hashes are stored, and service-role route handlers consume them exactly once.
 - Private canvas media bucket: `canvas-media`
 - Public profile avatar bucket: `profile-avatars`
 - Owner-scoped tables and RLS drive the core data model.
@@ -69,4 +71,5 @@
 - Route groups under `src/app/(dashboard)` are organizational and do not change the URL.
 - Legacy `/app/*` links are compatibility redirects only; do not add duplicate `/app` routes.
 - Server actions must continue to enforce auth and ownership checks.
+- Chrome extension web-session login requires `NYABAG_CHROME_EXTENSION_IDS` and only accepts `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirect URIs.
 - Docs are part of the architecture: update this file when routes, flows, or boundaries change.

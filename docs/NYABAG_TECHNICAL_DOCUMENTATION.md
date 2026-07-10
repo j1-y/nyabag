@@ -1,6 +1,6 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-07-07
+Last updated: 2026-07-10
 
 Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated workspace lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
@@ -144,6 +144,15 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Mobile users can submit a website URL.
 - The mobile URL uses the same `createBookmark` server action as desktop bookmark creation, so metadata, tags, palette, and screenshot behavior are shared.
 
+### Browser Extension API
+
+- Existing extension password login and refresh endpoints return normal Supabase access/refresh sessions.
+- Web-session login starts at `/api/extension/auth/start` with a Chrome identity `redirect_uri` and random `state`.
+- `start` requires an authenticated Nyabag web session or redirects to `/login?next=<start-url>`.
+- Authenticated starts create short-lived one-time exchange codes in `extension_auth_codes`; only code hashes are stored.
+- `/api/extension/auth/exchange` validates the same redirect URI, consumes the code exactly once, mints a separate Supabase session for the extension, and returns the same token shape as password login.
+- Existing extension `me`, `collections`, `capture`, `upload-url`, and `commit-screenshot` routes remain bearer-token compatible.
+
 ## Tech Stack
 
 | Area | Technology |
@@ -178,6 +187,7 @@ npm run lint
 ```text
 src/app/
   layout.tsx                         Root app layout and global CSS import
+  api/extension/                     Browser extension auth, capture, upload, and commit route handlers
   login/page.tsx                     Login page
   signup/page.tsx                    Signup page
   onboarding/page.tsx                First-memory onboarding flow
@@ -365,6 +375,24 @@ Sections are owner-scoped with RLS. Deleting a section should ungroup notes rath
 
 The schema includes storage policies so users can only read/write their own object paths.
 
+### `extension_auth_codes`
+
+Stores short-lived browser-extension web-session handoff codes.
+
+Important fields:
+
+| Field | Purpose |
+| --- | --- |
+| `code_hash` | SHA-256 hash of the random exchange code; the raw code is never stored |
+| `user_id` | Authenticated Nyabag user that initiated the flow |
+| `email` | User email used to mint the extension Supabase session |
+| `redirect_uri` | Exact allowlisted Chrome identity callback URL |
+| `state` | Extension-provided CSRF/state value |
+| `expires_at` | Five-minute expiry boundary |
+| `consumed_at` | Set atomically when `/api/extension/auth/exchange` consumes the code |
+
+RLS is enabled with no user-facing policies. Server route handlers use the service-role client for insert and atomic consume operations.
+
 ## Authentication and Security Model
 
 Security is enforced at several layers:
@@ -391,6 +419,12 @@ Security is enforced at several layers:
    - Zod schemas validate bookmarks, profile updates, notes, sections, positions, sizes, and deletes.
    - Social notes validate supported social URL formats.
    - Media URLs are normalized and rejected if invalid.
+
+6. **Extension web-session auth layer**
+   - `NYABAG_CHROME_EXTENSION_IDS` pins allowed Chrome identity redirect hosts.
+   - `/api/extension/auth/start` validates redirect URI and state before reading the web session.
+   - One-time exchange codes are short-lived, user-scoped, hashed at rest, and consumed with a single conditional update.
+   - `/api/extension/auth/exchange` returns normal Supabase tokens; extension APIs continue to verify them with `Authorization: Bearer <access_token>`.
 
 ## Bookmark System
 
@@ -726,6 +760,16 @@ Modules:
 
 ## Important Functions by Module
 
+### `src/lib/extension/web-session-auth.ts`
+
+| Function | Purpose |
+| --- | --- |
+| `validateChromeIdentityRedirectUri(...)` | Accept only `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirects from `NYABAG_CHROME_EXTENSION_IDS` |
+| `validateExtensionAuthState(...)` | Validate bounded URL-safe state values |
+| `createExtensionExchangeCode(...)` | Generate and store a hashed five-minute one-time code for the authenticated user |
+| `consumeExtensionExchangeCode(...)` | Atomically consume a matching unexpired code exactly once |
+| `createExtensionSessionForConsumedCode(...)` | Mint and verify a separate Supabase session for the extension |
+
 ### `src/lib/actions.ts`
 
 | Function | Purpose | Side effects |
@@ -852,6 +896,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 Confirm exact names in `src/lib/supabase/server.ts` and `src/lib/supabase/client.ts` before deployment.
 
+Extension web-session auth also requires the server-only allowlist:
+
+```text
+NYABAG_CHROME_EXTENSION_IDS
+```
+
+Never prefix this allowlist or `SUPABASE_SERVICE_ROLE_KEY` with `NEXT_PUBLIC_`.
+
 ### Bookmark Processor
 
 Used for current bookmark previews:
@@ -914,8 +966,9 @@ http://localhost:3000
    - `canvas-media`
    - `profile-avatars`
 4. Add Supabase environment variables to `.env.local`.
-5. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
-6. Restart the dev server.
+5. Add `NYABAG_CHROME_EXTENSION_IDS=<chrome-extension-id>` for browser-extension web-session login.
+6. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
+7. Restart the dev server.
 
 ### Vercel Deployment
 
@@ -924,6 +977,7 @@ http://localhost:3000
 3. Add Supabase environment variables.
 4. Deploy.
 5. Confirm Supabase auth redirect settings include the deployed domain.
+6. Configure `NYABAG_CHROME_EXTENSION_IDS` with the production Chrome extension id.
 
 ## Build, Lint, and Quality Status
 
@@ -1026,6 +1080,13 @@ Current lint warnings:
 - The old mandatory workspace preference, focus area, and Telegram setup gates were removed from first-run onboarding.
 - Telegram capture remains available from profile and through the existing Telegram API/webhook implementation.
 - Users can still skip bookmark creation explicitly; skipped onboarding keeps empty preference fields valid in `user_onboarding`.
+
+### Chrome extension web-session login
+
+- Added `/api/extension/auth/start` and `/api/extension/auth/exchange`.
+- The start route validates an allowlisted Chrome identity redirect URI and random state, then uses the current Nyabag web session to create a short-lived hashed exchange code.
+- The exchange route consumes the code once, rejects expired/reused/redirect-mismatched codes, and returns a separate Supabase session compatible with existing extension bearer-token endpoints.
+- `extension_auth_codes` stores only hashed codes and is accessible only from service-role server code.
 
 ### Bookmark detail hydration date issue
 

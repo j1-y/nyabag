@@ -2075,6 +2075,47 @@ ALTER TABLE rate_limits ENABLE ROW LEVEL SECURITY;
 -- using the service role client.
 
 -- ============================================================
+-- Extension web-session auth codes
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS extension_auth_codes (
+  id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  code_hash    TEXT        NOT NULL UNIQUE,
+  user_id      UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  email        TEXT        NOT NULL,
+  redirect_uri TEXT        NOT NULL,
+  state        TEXT        NOT NULL,
+  expires_at   TIMESTAMPTZ NOT NULL,
+  consumed_at  TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE extension_auth_codes
+  DROP CONSTRAINT IF EXISTS extension_auth_codes_code_hash_check,
+  DROP CONSTRAINT IF EXISTS extension_auth_codes_email_check,
+  DROP CONSTRAINT IF EXISTS extension_auth_codes_redirect_uri_check,
+  DROP CONSTRAINT IF EXISTS extension_auth_codes_state_check,
+  ADD CONSTRAINT extension_auth_codes_code_hash_check CHECK (code_hash ~ '^[0-9a-f]{64}$'),
+  ADD CONSTRAINT extension_auth_codes_email_check CHECK (char_length(email) <= 320),
+  ADD CONSTRAINT extension_auth_codes_redirect_uri_check CHECK (char_length(redirect_uri) <= 2048),
+  ADD CONSTRAINT extension_auth_codes_state_check CHECK (char_length(state) BETWEEN 16 AND 256);
+
+CREATE UNIQUE INDEX IF NOT EXISTS extension_auth_codes_code_hash_idx
+  ON extension_auth_codes(code_hash);
+
+CREATE INDEX IF NOT EXISTS extension_auth_codes_expires_at_idx
+  ON extension_auth_codes(expires_at)
+  WHERE consumed_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS extension_auth_codes_user_created_idx
+  ON extension_auth_codes(user_id, created_at DESC);
+
+ALTER TABLE extension_auth_codes ENABLE ROW LEVEL SECURITY;
+
+-- No user-facing policies. This table stores hashed one-time extension auth
+-- codes and should only be touched from server code using the service role.
+
+-- ============================================================
 -- Bookmark Folders
 -- ============================================================
 
@@ -2152,3 +2193,7 @@ CREATE INDEX IF NOT EXISTS bookmarks_folder_id_idx
 
 CREATE INDEX IF NOT EXISTS bookmarks_user_folder_idx
   ON bookmarks(user_id, folder_id);
+
+-- Force Supabase/PostgREST to refresh its schema cache after new columns,
+-- tables, constraints, and policies are created.
+NOTIFY pgrst, 'reload schema';

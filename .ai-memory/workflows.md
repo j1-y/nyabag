@@ -106,6 +106,25 @@
 - Memory updates required:
   - Update `architecture.md` and `roadmap.md` if operational behavior changes
 
+## Extension API Workflow
+
+- Files to inspect:
+  - `src/app/api/extension/*`
+  - `src/lib/extension/*`
+  - `supabase/schema.sql`
+  - `docs/NYABAG_TECHNICAL_DOCUMENTATION.md`
+- Files to update:
+  - The route handler/helper implementation
+  - `.ai-memory/architecture.md`
+  - `.ai-memory/feature-registry.md`
+  - `decision-log.md` for auth/security boundary changes
+- Validation steps:
+  - Run `npm run build`
+  - Run `npm run lint`
+  - Smoke-test bearer-token compatibility on `/api/extension/me`, collections, and capture routes when session behavior changes
+- Memory updates required:
+  - Update the feature registry for extension contract changes and architecture for route/schema boundaries
+
 ## Documentation Update Workflow
 
 - Files to inspect:
