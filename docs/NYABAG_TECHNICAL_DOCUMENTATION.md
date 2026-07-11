@@ -1091,7 +1091,8 @@ Current lint warnings:
 - The exchange route consumes the code once, rejects expired/reused/redirect-mismatched codes, and returns a separate Supabase session compatible with existing extension bearer-token endpoints.
 - `extension_auth_codes` stores only hashed codes and is accessible only from service-role server code.
 - Extension bearer-token routes return stable authentication error codes with their existing HTTP status and message. The extension may display these diagnostics, but must redact tokens, authorization headers, cookies, passwords, and secrets.
-- Extension sessions are stored with their API origin and validated through `/api/extension/me` after exchange, refresh, or cookie fallback. Page/link/selection captures use `/api/extension/capture`; screenshot binaries use `/api/extension/captures` for compression and storage.
+- Extension sessions are stored with their API origin and validated through `/api/extension/me` after exchange, refresh, or cookie fallback. `/api/extension/captures` handles both bookmark-style saves and screenshot compression/storage, dispatching by whether `imageBase64` is present.
+- The `/captures` gallery opens images in a body-portaled, full-viewport lightbox so the dashboard sidebar and clipped main panel cannot constrain it. Captures open fitted to the viewport and support zoom, drag panning, keyboard navigation, metadata, source actions, and deletion.
 
 ### Bookmark detail hydration date issue
 

@@ -5,6 +5,11 @@ import { createAdminServiceClient } from "@/lib/admin/service";
 import { authenticateExtensionUser } from "@/lib/extension/auth";
 import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import { extensionCors, handleExtensionPreflight } from "@/lib/extension/cors";
+import {
+  createBookmarkCaptureResponse,
+  type ExtensionBookmarkCapturePayload,
+} from "@/lib/extension/create-bookmark-capture";
+import { classifyExtensionCapture } from "@/lib/extension/capture-dispatch";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +24,10 @@ const JPEG_QUALITY = 75;
 const MAX_INPUT_BYTES = 15 * 1024 * 1024;
 const SIGNED_URL_TTL = 365 * 24 * 60 * 60;
 
+type UnifiedCapturePayload = ExtensionBookmarkCapturePayload & {
+  mimeType?: string;
+};
+
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
   const auth = await authenticateExtensionUser(request);
@@ -27,6 +36,29 @@ export async function POST(request: NextRequest) {
       NextResponse.json({ error: auth.error, code: auth.code, details: auth.details }, { status: auth.status }),
       origin
     );
+  }
+
+  let body: UnifiedCapturePayload;
+
+  try {
+    body = await request.json();
+  } catch {
+    return extensionCors(
+      NextResponse.json({ error: "Invalid JSON payload", code: "CAPTURE_INVALID_JSON" }, { status: 400 }),
+      origin
+    );
+  }
+
+  const dispatch = classifyExtensionCapture(body);
+  if (dispatch.kind === "error") {
+    return extensionCors(
+      NextResponse.json({ error: dispatch.error, code: dispatch.code }, { status: dispatch.status }),
+      origin
+    );
+  }
+
+  if (dispatch.kind === "bookmark") {
+    return createBookmarkCaptureResponse({ payload: body, auth, origin });
   }
 
   const rate = await checkRateLimit({
@@ -42,28 +74,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: {
-    imageBase64?: string;
-    mimeType?: string;
-    pageUrl?: string;
-    pageTitle?: string;
-    source?: string;
-  };
-
-  try {
-    body = await request.json();
-  } catch {
-    return extensionCors(
-      NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 }),
-      origin
-    );
-  }
-
   const { imageBase64, pageUrl, pageTitle, source = "extension" } = body;
-
   if (!imageBase64) {
     return extensionCors(
-      NextResponse.json({ error: "imageBase64 is required" }, { status: 400 }),
+      NextResponse.json({ error: "Screenshot image data is required", code: "SCREENSHOT_IMAGE_REQUIRED" }, { status: 400 }),
       origin
     );
   }

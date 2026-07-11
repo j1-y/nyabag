@@ -1,19 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createAdminServiceClient } from "@/lib/admin/service";
-import { authenticateExtensionUser } from "@/lib/extension/auth";
+import type { ExtensionUserAuthResult } from "@/lib/extension/auth";
 import { validatePublicHttpUrl } from "@/lib/security/url-safety";
 import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import { getDesignData, getDomain } from "@/lib/data";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
-import { extensionCors, handleExtensionPreflight } from "@/lib/extension/cors";
-
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-export function OPTIONS(request: NextRequest) {
-  return handleExtensionPreflight(request);
-}
+import { extensionCors } from "@/lib/extension/cors";
 
 type ExtensionCaptureType =
   | "page"
@@ -23,7 +16,7 @@ type ExtensionCaptureType =
   | "visible_screenshot"
   | "full_page_screenshot";
 
-type ExtensionCapturePayload = {
+export type ExtensionBookmarkCapturePayload = {
   type?: ExtensionCaptureType;
   url?: string;
   pageUrl?: string;
@@ -50,7 +43,7 @@ function getFilenameFromUrl(url: string) {
   }
 }
 
-function getTitleForCapture(payload: ExtensionCapturePayload, safeTargetUrl: string) {
+function getTitleForCapture(payload: ExtensionBookmarkCapturePayload, safeTargetUrl: string) {
   const domain = getDomain(safeTargetUrl);
   const pageTitle = payload.pageTitle?.trim();
 
@@ -74,7 +67,7 @@ function getTitleForCapture(payload: ExtensionCapturePayload, safeTargetUrl: str
   return pageTitle || (domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : safeTargetUrl);
 }
 
-function getNoteForCapture(payload: ExtensionCapturePayload, safePageUrl?: string) {
+function getNoteForCapture(payload: ExtensionBookmarkCapturePayload, safePageUrl?: string) {
   const source = payload.source || "chrome-extension";
 
   if (payload.type === "selection") {
@@ -132,17 +125,15 @@ async function triggerProcessorBestEffort() {
   }
 }
 
-export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  const auth = await authenticateExtensionUser(request);
-
-  if (!auth.success) {
-    return extensionCors(
-      NextResponse.json({ error: auth.error, code: auth.code, details: auth.details }, { status: auth.status }),
-      origin
-    );
-  }
-
+export async function createBookmarkCaptureResponse({
+  payload,
+  auth,
+  origin,
+}: {
+  payload: ExtensionBookmarkCapturePayload;
+  auth: Extract<ExtensionUserAuthResult, { success: true }>;
+  origin: string | null;
+}) {
   const rate = await checkRateLimit({
     scope: "extension-capture",
     identifier: userLimitKey(auth.user.id),
@@ -160,22 +151,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let payload: ExtensionCapturePayload;
-
-  try {
-    payload = (await request.json()) as ExtensionCapturePayload;
-  } catch {
-    return extensionCors(
-      NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 }),
-      origin
-    );
-  }
-
   const type = payload.type;
 
   if (!type) {
     return extensionCors(
-      NextResponse.json({ error: "Capture type is required" }, { status: 400 }),
+      NextResponse.json({ error: "Capture type is required", code: "CAPTURE_TYPE_REQUIRED" }, { status: 400 }),
       origin
     );
   }
@@ -186,7 +166,10 @@ export async function POST(request: NextRequest) {
       : payload.url;
 
   if (!targetUrl) {
-    return NextResponse.json({ error: "A valid URL is required" }, { status: 400 });
+    return extensionCors(
+      NextResponse.json({ error: "A valid URL is required", code: "CAPTURE_URL_REQUIRED" }, { status: 400 }),
+      origin
+    );
   }
 
   const safeTargetUrl = await validatePublicHttpUrl(targetUrl);

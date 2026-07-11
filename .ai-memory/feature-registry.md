@@ -83,9 +83,17 @@
 ## Extension
 
 - Feature: Browser extension API
-- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, collection lookup, bookmark capture, screenshot storage, upload, and commit flows. Sessions are API-origin-bound and validated through `/me`; screenshot binaries use `/captures`, and bearer-auth failures expose stable safe diagnostic codes.
+- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, collection lookup, unified bookmark/screenshot capture through `/captures`, upload, and commit flows. Sessions are API-origin-bound and validated through `/me`, and bearer-auth failures expose stable safe diagnostic codes.
 - Key Files: `src/app/api/extension/*`, `src/lib/extension/*`, `supabase/schema.sql`
 - Dependencies: Supabase auth, service-role-only one-time auth code storage, `NYABAG_CHROME_EXTENSION_IDS`, CORS rules, capture storage, extension client state
+- Status: Active
+
+## Captures
+
+- Feature: Screenshot captures gallery and lightbox
+- Description: Masonry screenshot gallery with a body-portaled full-viewport lightbox, fit-to-screen display, zoom and drag panning, keyboard navigation, metadata, source actions, and deletion.
+- Key Files: `src/components/captures/CapturesPageClient.tsx`, `src/app/(dashboard)/captures/page.tsx`, `src/app/globals.css`, `src/app/api/captures/[id]/route.ts`
+- Dependencies: Authenticated dashboard shell, `captures` table, private capture storage signed URLs
 - Status: Active
 
 ## Future Features
