@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     body = await request.json();
   } catch {
     return extensionCors(
-      NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 }),
+      NextResponse.json({ error: "Invalid JSON payload", code: "AUTH_INVALID_REFRESH_REQUEST" }, { status: 400 }),
       origin
     );
   }
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   if (!refreshToken) {
     return extensionCors(
       NextResponse.json(
-        { error: "Refresh token is required" },
+        { error: "Refresh token is required", code: "AUTH_MISSING_REFRESH_TOKEN" },
         { status: 400 }
       ),
       origin
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   if (error || !data.session || !data.user) {
     return extensionCors(
       NextResponse.json(
-        { error: error?.message ?? "Could not refresh session" },
+        { error: error?.message ?? "Could not refresh session", code: "AUTH_REFRESH_FAILED" },
         { status: 401 }
       ),
       origin

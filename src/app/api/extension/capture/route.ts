@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
 
   if (!auth.success) {
     return extensionCors(
-      NextResponse.json({ error: auth.error }, { status: auth.status }),
+      NextResponse.json({ error: auth.error, code: auth.code, details: auth.details }, { status: auth.status }),
       origin
     );
   }

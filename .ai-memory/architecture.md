@@ -73,4 +73,6 @@
 - Server actions must continue to enforce auth and ownership checks.
 - Chrome extension web-session login requires `NYABAG_CHROME_EXTENSION_IDS` and only accepts `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirect URIs.
 - Unauthenticated extension start requests redirect to `/login?next=<original start url>`, and the login/signup pages preserve that `next` value so the extension auth flow resumes after web auth instead of dropping into the normal dashboard path.
+- Extension bearer-auth failures return stable `AUTH_*` codes alongside their existing status and message so extension clients can show actionable diagnostics without exposing credentials.
+- Extension clients bind stored sessions to the API origin and validate exchanged or cookie-derived sessions through `/api/extension/me`; screenshot binaries use `/api/extension/captures`, while bookmark-style saves use `/api/extension/capture`.
 - Docs are part of the architecture: update this file when routes, flows, or boundaries change.

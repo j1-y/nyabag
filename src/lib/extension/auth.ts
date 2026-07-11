@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import crypto from "node:crypto";
 import type { NextRequest } from "next/server";
 
 export type ExtensionUserAuthResult =
@@ -16,12 +17,22 @@ export type ExtensionUserAuthResult =
       success: false;
       status: number;
       error: string;
+      code: "AUTH_MISSING_ACCESS_TOKEN" | "AUTH_INVALID_SESSION" | "AUTH_SERVER_CONFIG" | "AUTH_PROVIDER_UNAVAILABLE";
+      details?: { requestId: string; providerReason?: string };
     };
 
 function getBearerToken(request: NextRequest) {
   const authorization = request.headers.get("authorization") ?? "";
   const match = authorization.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() ?? null;
+}
+
+function safeProviderReason(value: unknown) {
+  const reason = value instanceof Error ? value.message : String(value ?? "Authentication provider request failed");
+  return reason
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g, "[redacted token]")
+    .slice(0, 300);
 }
 
 export function createExtensionAuthClient() {
@@ -44,12 +55,25 @@ export async function authenticateExtensionUser(
   request: NextRequest
 ): Promise<ExtensionUserAuthResult> {
   const accessToken = getBearerToken(request);
+  const requestId = crypto.randomUUID();
 
   if (!accessToken) {
     return {
       success: false,
       status: 401,
       error: "Missing access token",
+      code: "AUTH_MISSING_ACCESS_TOKEN",
+      details: { requestId },
+    };
+  }
+
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return {
+      success: false,
+      status: 500,
+      error: "Extension authentication is not configured",
+      code: "AUTH_SERVER_CONFIG",
+      details: { requestId, providerReason: "NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing" },
     };
   }
 
@@ -65,6 +89,8 @@ export async function authenticateExtensionUser(
         success: false,
         status: 401,
         error: "Invalid or expired session",
+        code: "AUTH_INVALID_SESSION",
+        details: { requestId, providerReason: safeProviderReason(error?.message) },
       };
     }
 
@@ -79,8 +105,13 @@ export async function authenticateExtensionUser(
   } catch (error) {
     return {
       success: false,
-      status: 500,
-      error: error instanceof Error ? error.message : "Could not authenticate extension user",
+      status: 502,
+      error: "Could not verify extension session with the authentication provider",
+      code: "AUTH_PROVIDER_UNAVAILABLE",
+      details: {
+        requestId,
+        providerReason: safeProviderReason(error),
+      },
     };
   }
 }

@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateExtensionUser(request);
   if (!auth.success) {
     return extensionCors(
-      NextResponse.json({ error: auth.error }, { status: auth.status }),
+      NextResponse.json({ error: auth.error, code: auth.code, details: auth.details }, { status: auth.status }),
       origin
     );
   }
