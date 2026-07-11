@@ -2,19 +2,21 @@
 
 import { HugeIcon } from "@/components/ui/huge-icon";
 import { IconLoader } from "@/components/ui/icons";
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-;
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { timeAsync } from "@/lib/perf";
+import { getSafeInternalPath } from "@/lib/security/redirect-safety";
 
-export default function SignupPage() {
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const nextPath = getSafeInternalPath(searchParams.get("next"), "/onboarding");
 
   const supabaseReady =
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -46,11 +48,13 @@ export default function SignupPage() {
         }
 
         if (data.session) {
-          router.replace("/onboarding");
+          router.replace(nextPath);
           return;
         }
 
-        setError("Check your email to confirm your account, then sign in to continue to onboarding.");
+        setError(
+          "Check your email to confirm your account, then sign in to continue where you left off."
+        );
         setLoading(false);
       });
     } catch (err: unknown) {
@@ -116,9 +120,31 @@ export default function SignupPage() {
           </button>
         </form>
         <p className="auth-footer">
-          Already have an account? <Link href="/login">Sign in</Link>
+          Already have an account? <Link href={`/login?next=${encodeURIComponent(nextPath)}`}>Sign in</Link>
         </p>
       </div>
     </div>
+  );
+}
+
+function SignupFallback() {
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="auth-logo">
+          <img src="/assets/logo.svg" alt="Nyabag logo" className="h-8 w-auto object-contain" />
+        </div>
+        <h1 className="auth-title">Loading signup...</h1>
+        <p className="auth-subtitle">Preparing your account page</p>
+      </div>
+    </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupFallback />}>
+      <SignupForm />
+    </Suspense>
   );
 }

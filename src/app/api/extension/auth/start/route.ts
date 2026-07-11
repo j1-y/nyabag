@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
+  buildExtensionLoginRedirectUrl,
   createExtensionExchangeCode,
   validateChromeIdentityRedirectUri,
   validateExtensionAuthState,
@@ -32,12 +33,7 @@ export async function GET(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const loginUrl = request.nextUrl.clone();
-    const currentStartUrl = `${request.nextUrl.pathname}${request.nextUrl.search}`;
-    loginUrl.pathname = "/login";
-    loginUrl.search = "";
-    loginUrl.searchParams.set("next", currentStartUrl);
-    return noStore(NextResponse.redirect(loginUrl));
+    return noStore(NextResponse.redirect(buildExtensionLoginRedirectUrl(request.nextUrl)));
   }
 
   const email = user.email?.trim();

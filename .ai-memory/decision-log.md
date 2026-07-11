@@ -95,3 +95,7 @@
 ## Decision: Extension web-session login uses allowlisted one-time codes
 
 - Reason: Chrome extension login should reuse a real Nyabag web session without exposing service-role keys or accepting arbitrary callback URLs. `/api/extension/auth/start` only accepts Chrome identity redirects for ids in `NYABAG_CHROME_EXTENSION_IDS`, stores only hashed short-lived exchange codes, and `/api/extension/auth/exchange` consumes each code once before returning a separate Supabase session for existing bearer-token extension APIs.
+
+## Decision: Extension auth preserves the original start URL through login and signup
+
+- Reason: When a user is not already authenticated, the extension auth start route must send them through the normal Nyabag login/signup screens without losing the original `/api/extension/auth/start?...` request, otherwise the web-session handoff can never complete after auth.

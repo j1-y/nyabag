@@ -83,7 +83,7 @@
 ## Extension
 
 - Feature: Browser extension API
-- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, collection lookup, capture, upload, and commit flows.
+- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, collection lookup, capture, upload, and commit flows. Web-session auth preserves the original extension `next` start URL through login and signup before redirecting back to the allowlisted `chromiumapp.org` callback.
 - Key Files: `src/app/api/extension/*`, `src/lib/extension/*`, `supabase/schema.sql`
 - Dependencies: Supabase auth, service-role-only one-time auth code storage, `NYABAG_CHROME_EXTENSION_IDS`, CORS rules, capture storage, extension client state
 - Status: Active

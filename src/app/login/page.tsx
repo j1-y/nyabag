@@ -5,7 +5,6 @@ import { IconLoader } from "@/components/ui/icons";
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-;
 import { createClient } from "@/lib/supabase/client";
 import { timeAsync } from "@/lib/perf";
 import { getSafeInternalPath } from "@/lib/security/redirect-safety";
@@ -126,7 +125,7 @@ function LoginForm() {
         </form>
 
         <p className="auth-footer">
-          No account? <Link href="/signup">Create one</Link>
+          No account? <Link href={`/signup?next=${encodeURIComponent(nextPath)}`}>Create one</Link>
         </p>
       </div>
     </div>

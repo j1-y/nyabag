@@ -72,4 +72,5 @@
 - Legacy `/app/*` links are compatibility redirects only; do not add duplicate `/app` routes.
 - Server actions must continue to enforce auth and ownership checks.
 - Chrome extension web-session login requires `NYABAG_CHROME_EXTENSION_IDS` and only accepts `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirect URIs.
+- Unauthenticated extension start requests redirect to `/login?next=<original start url>`, and the login/signup pages preserve that `next` value so the extension auth flow resumes after web auth instead of dropping into the normal dashboard path.
 - Docs are part of the architecture: update this file when routes, flows, or boundaries change.

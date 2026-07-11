@@ -149,6 +149,7 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Existing extension password login and refresh endpoints return normal Supabase access/refresh sessions.
 - Web-session login starts at `/api/extension/auth/start` with a Chrome identity `redirect_uri` and random `state`.
 - `start` requires an authenticated Nyabag web session or redirects to `/login?next=<start-url>`.
+- If the user is unauthenticated, the login/signup round-trip preserves that original `next` value so the browser-extension auth request resumes after web auth instead of landing in the normal dashboard flow.
 - Authenticated starts create short-lived one-time exchange codes in `extension_auth_codes`; only code hashes are stored.
 - `/api/extension/auth/exchange` validates the same redirect URI, consumes the code exactly once, mints a separate Supabase session for the extension, and returns the same token shape as password login.
 - Existing extension `me`, `collections`, `capture`, `upload-url`, and `commit-screenshot` routes remain bearer-token compatible.
@@ -967,8 +968,9 @@ http://localhost:3000
    - `profile-avatars`
 4. Add Supabase environment variables to `.env.local`.
 5. Add `NYABAG_CHROME_EXTENSION_IDS=<chrome-extension-id>` for browser-extension web-session login.
-6. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
-7. Restart the dev server.
+6. If `NYABAG_CHROME_EXTENSION_IDS` is missing in production, `/api/extension/auth/start` fails closed with a 500 diagnostic naming that env var.
+7. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
+8. Restart the dev server.
 
 ### Vercel Deployment
 
@@ -978,6 +980,7 @@ http://localhost:3000
 4. Deploy.
 5. Confirm Supabase auth redirect settings include the deployed domain.
 6. Configure `NYABAG_CHROME_EXTENSION_IDS` with the production Chrome extension id.
+7. Keep the local `.env.local` and deployment env aligned so the extension auth allowlist matches the installed extension id.
 
 ## Build, Lint, and Quality Status
 
