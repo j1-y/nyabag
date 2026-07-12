@@ -67,7 +67,7 @@ function getCortexApiUrl() {
 let hasLoggedMissingCortexApiUrl = false;
 let hasLoggedMissingCortexDeleteInternalKey = false;
 let hasLoggedMissingCortexSearchInternalKey = false;
-const CORTEX_DELETE_TIMEOUT_MS = 5_000;
+const CORTEX_DELETE_TIMEOUT_MS = 60_000;
 
 export function isCortexConfigured() {
   return Boolean(getCortexApiUrl());

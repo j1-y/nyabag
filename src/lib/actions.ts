@@ -970,14 +970,18 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
     }
 
     revalidatePath("/");
-    await deleteBookmarkFromCortex({
-      nyabagBookmarkId: id,
-      userId: user.id,
-      workspaceId: activeWorkspaceId,
-      memoryId: bookmarkForCleanup?.cortex_memory_id,
-    });
-    await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path);
-    await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.long_screenshot_path);
+      
+    // Fire-and-forget background cleanup so UI remains instant
+    Promise.allSettled([
+      deleteBookmarkFromCortex({
+        nyabagBookmarkId: id,
+        userId: user.id,
+        workspaceId: activeWorkspaceId,
+        memoryId: bookmarkForCleanup?.cortex_memory_id,
+      }),
+      removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path),
+      removeBookmarkScreenshot(supabase, bookmarkForCleanup?.long_screenshot_path)
+    ]).catch(err => console.error("[deleteBookmark] Background cleanup failed:", err));
 
     return { success: true, data: undefined };
   } catch (err: unknown) {
