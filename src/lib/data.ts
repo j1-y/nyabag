@@ -23,16 +23,9 @@ export function getDomain(url: string): string {
 }
 
 export function getDesignData(url: string): { palette: string[]; fonts: string[] } {
-  const domain = getDomain(url);
-  if (DESIGN_DB[domain]) return DESIGN_DB[domain];
-  const key = Object.keys(DESIGN_DB).find(
-    (candidate) => domain.includes(candidate) || candidate.includes(domain)
-  );
-  if (key) return DESIGN_DB[key];
-  const seed = domain.split("").reduce((sum, character) => sum + character.charCodeAt(0), 0);
   return {
-    palette: [...FALLBACK_PALETTES[seed % FALLBACK_PALETTES.length]],
-    fonts: FALLBACK_FONTS[seed % FALLBACK_FONTS.length],
+    palette: [],
+    fonts: [],
   };
 }
 

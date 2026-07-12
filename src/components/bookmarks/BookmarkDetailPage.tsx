@@ -124,26 +124,39 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
             </p>
           </div>
 
-          <div className="detail-section">
-            <h2><HugeIcon icon={IconPalette} size={18} /> Extracted colors</h2>
-            <BookmarkColorPalette colors={currentBookmark.palette} />
-          </div>
+          {currentBookmark.cortex_status === "ready" ? (
+            <>
+              <div className="detail-section">
+                <h2><HugeIcon icon={IconPalette} size={18} /> Extracted colors</h2>
+                <BookmarkColorPalette colors={currentBookmark.palette} />
+              </div>
 
-          <div className="detail-section">
-            <h2><HugeIcon icon={IconText} size={18} /> Detected fonts</h2>
-            <div className="detail-chip-list">
-              {currentBookmark.fonts.map((font) => <span key={font}>{font}</span>)}
-            </div>
-          </div>
+              <div className="detail-section">
+                <h2><HugeIcon icon={IconText} size={18} /> Detected fonts</h2>
+                <div className="detail-chip-list">
+                  {currentBookmark.fonts.map((font) => <span key={font}>{font}</span>)}
+                </div>
+              </div>
 
-          <div className="detail-section">
-            <h2><HugeIcon icon={IconTag} size={18} /> Tags</h2>
-            <div className="detail-chip-list">
-              {currentBookmark.tags.length
-                ? currentBookmark.tags.map((tag) => <span key={tag}>{tag}</span>)
-                : <span>No tags</span>}
+              <div className="detail-section">
+                <h2><HugeIcon icon={IconTag} size={18} /> Tags</h2>
+                <div className="detail-chip-list">
+                  {currentBookmark.tags.length
+                    ? currentBookmark.tags.map((tag) => <span key={tag}>{tag}</span>)
+                    : <span>No tags</span>}
+                </div>
+              </div>
+            </>
+          ) : currentBookmark.cortex_status === "failed" ? (
+            <div className="detail-section">
+              <p className="detail-color-empty" style={{ opacity: 0.8 }}>Design memory extraction failed.</p>
             </div>
-          </div>
+          ) : (
+            <div className="detail-section" style={{ display: "flex", alignItems: "center", gap: "8px", opacity: 0.7 }}>
+              <HugeIcon icon={IconLoader} className="animate-spin" size={18} />
+              <p style={{ margin: 0 }}>Analyzing design memory...</p>
+            </div>
+          )}
 
           <div className="detail-actions">
             <Button className="detail-action-btn detail-action-btn-danger" variant="destructive" onClick={() => setDeleteOpen(true)} disabled={isPending}>
