@@ -6,6 +6,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 const DEFAULT_ONBOARDING: UserOnboarding = {
   user_id: "",
+  workspace_id: "",
   workspace_type: "",
   primary_goal: "",
   focus_area: "",
