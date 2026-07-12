@@ -179,52 +179,20 @@ function BookmarkCardComponent({
                 )}
               </>
             ) : isPendingPreview ? (
-              <div className="bmp-panel">
-                {/* Subtle scan sweep (onboarding-style, no blue) */}
-                <div className="bmp-scan-sweep" aria-hidden="true" />
-
-                {/* Browser chrome bar */}
-                <div className="bmp-browser-bar">
-                  <span /><span /><span />
-                  <div className="bmp-address">
-                    {favicon && !faviconError ? (
-                      <img src={favicon} alt="" width={10} height={10}
-                        style={{ borderRadius: 2, objectFit: "contain", flexShrink: 0 }}
-                        onError={() => setFaviconError(true)} />
-                    ) : (
-                      <span className="bmp-address-dot" />
-                    )}
-                    <span className="bmp-address-text">{domain}</span>
-                  </div>
+              <div className="preview-loading-skeleton" aria-hidden="true">
+                <div className="preview-loading-browser">
+                  <span />
+                  <span />
+                  <span />
                 </div>
-
-                {/* Toolbar row */}
-                <div className="bmp-toolbar">
-                  <span className="bmp-pill bmp-pill--wide" />
-                  <span className="bmp-pill" />
-                  <span className="bmp-pill" />
-                  <span className="bmp-pill" />
+                <div className="preview-loading-body">
+                  <div className="preview-loading-line preview-loading-line-sm" />
+                  <div className="preview-loading-hero" />
+                  <div className="preview-loading-line" />
+                  <div className="preview-loading-line preview-loading-line-mid" />
                 </div>
-
-                {/* Hero image block */}
-                <div className="bmp-hero" />
-
-                {/* Text lines */}
-                <div className="bmp-text-stack">
-                  <span className="bmp-line bmp-line--title" />
-                  <span className="bmp-line bmp-line--short" />
-                  <span className="bmp-rule" />
-                  <span className="bmp-rule bmp-rule--short" />
-                </div>
-
-                {/* Card grid */}
-                <div className="bmp-card-grid">
-                  <span /><span /><span /><span />
-                </div>
-
-                {/* Status pill */}
-                <div className="bmp-status">
-                  <HugeIcon icon={IconLoader} size={13} className="bmp-spinner" />
+                <div className="skeleton-preview-status">
+                  <HugeIcon icon={IconLoader} className="animate-spin" />
                   <span>{pendingLabel}</span>
                 </div>
               </div>
