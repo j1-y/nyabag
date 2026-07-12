@@ -1,24 +1,54 @@
 "use client";
 
-import { HugeIcon } from "@/components/ui/huge-icon";
-import { IconSave } from "@/components/ui/icons";
-import { useRef, useState, useTransition } from "react";
-;
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createBookmark } from "@/lib/actions";
 import { useBookmarks } from "@/hooks/useBookmarks";
-import { Button } from "@/components/ui/button";
+import { getDomain, getFaviconUrl } from "@/lib/data";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldHint, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { FolderSelector } from "@/components/folders/FolderSelector";
+import { Button } from "@/components/ui/button";
+import { HugeIcon } from "@/components/ui/huge-icon";
+import { IconArrowRight, IconCheck, IconLoader } from "@/components/ui/icons";
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function normalizeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function isValidUrl(raw: string): boolean {
+  try {
+    const url = new URL(normalizeUrl(raw));
+    return (url.protocol === "http:" || url.protocol === "https:") &&
+      url.hostname.includes(".");
+  } catch {
+    return false;
+  }
+}
+
+type Phase = "idle" | "confirmed" | "saving" | "saved";
+
+// Two-tick mount hook: returns false → true after element is in DOM so CSS transitions run
+function useMounted(active: boolean) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    if (active) {
+      const id = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setVisible(false);
+    }
+  }, [active]);
+  return visible;
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
 
 export function AddBookmarkModal() {
   const {
@@ -29,112 +59,220 @@ export function AddBookmarkModal() {
     removePendingBookmark,
     setBookmarks,
   } = useBookmarks();
-  const formRef = useRef<HTMLFormElement>(null);
-  const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState("");
+
   const [urlInput, setUrlInput] = useState("");
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingIdRef = useRef<string | null>(null);
 
-  const domainHint = (() => {
-    if (!urlInput) return "Auto-detected from URL";
-    try {
-      const hostname = new URL(urlInput.startsWith("http") ? urlInput : `https://${urlInput}`).hostname.replace("www.", "");
-      const base = hostname.split(".")[0];
-      return base.charAt(0).toUpperCase() + base.slice(1);
-    } catch {
-      return "Auto-detected from URL";
+  const urlValid = isValidUrl(urlInput);
+  const domain = urlValid ? getDomain(normalizeUrl(urlInput)) : "";
+  const faviconUrl = urlValid ? getFaviconUrl(normalizeUrl(urlInput)) : null;
+
+  // Animate preview/footer in: mount when valid, add class one frame later
+  const previewVisible = useMounted(urlValid);
+
+  // Reset when modal opens/closes
+  useEffect(() => {
+    if (addOpen) {
+      setTimeout(() => inputRef.current?.focus(), 60);
+    } else {
+      setUrlInput("");
+      setPhase("idle");
+      setError("");
     }
-  })();
+  }, [addOpen]);
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    const fd = new FormData(formRef.current!);
-    // Ensure folder_id is in the form data
-    if (selectedFolderId) {
-      fd.set("folder_id", selectedFolderId);
+  // Auto-advance to "confirmed" when URL becomes valid
+  useEffect(() => {
+    if (urlValid && phase === "idle") {
+      setPhase("confirmed");
+    } else if (!urlValid && phase === "confirmed") {
+      setPhase("idle");
     }
-    const optimisticUrl = String(fd.get("url") ?? "");
-    const optimisticTitle = String(fd.get("title") ?? "").trim() || domainHint;
-    const pendingId = crypto.randomUUID();
+  }, [urlValid, phase]);
 
-    addPendingBookmark({
-      id: pendingId,
-      title: optimisticTitle,
-      url: optimisticUrl,
-    });
+  function handleClose() {
+    if (phase === "saving") return;
     closeAdd();
+  }
+
+  function handleSave() {
+    if (!urlValid || phase === "saving" || phase === "saved") return;
+
+    const finalUrl = normalizeUrl(urlInput);
+    const pendingId = crypto.randomUUID();
+    pendingIdRef.current = pendingId;
+
+    const optimisticTitle =
+      domain.charAt(0).toUpperCase() + domain.slice(1) || finalUrl;
+
+    setPhase("saving");
+    setError("");
+
+    addPendingBookmark({ id: pendingId, title: optimisticTitle, url: finalUrl });
+
+    const fd = new FormData();
+    fd.set("url", finalUrl);
+    fd.set("title", "");
+    fd.set("tags", "");
+    fd.set("note", "");
 
     startTransition(async () => {
       const result = await createBookmark(fd);
-      removePendingBookmark(pendingId);
+      const pid = pendingIdRef.current!;
+      removePendingBookmark(pid);
+
       if (result.success) {
         setBookmarks((prev) => [result.data, ...prev.filter((b) => b.id !== result.data.id)]);
-        formRef.current?.reset();
-        setUrlInput("");
-        setSelectedFolderId(null);
+        setPhase("saved");
+        setTimeout(() => {
+          closeAdd();
+        }, 900);
       } else {
+        setPhase("confirmed");
         setError(result.error);
         openAdd();
       }
     });
   }
 
-  function handleClose() {
-    setSelectedFolderId(null);
-    setUrlInput("");
-    setError("");
-    closeAdd();
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" && urlValid) {
+      handleSave();
+    }
   }
+
+  const isBusy = phase === "saving" || isPending;
 
   return (
     <Dialog open={addOpen} onOpenChange={(open) => (open ? openAdd() : handleClose())}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New bookmark</DialogTitle>
-          <DialogDescription>
-            Save a reference and Nyabag will enrich it in the background.
-          </DialogDescription>
-        </DialogHeader>
-        <form ref={formRef} onSubmit={handleSubmit}>
-          <div className="grid gap-4 px-4 py-4">
-            {error && <div className="auth-error">{error}</div>}
-            <Field>
-              <FieldLabel htmlFor="add-url">URL <span className="text-destructive">*</span></FieldLabel>
-              <Input id="add-url" name="url" type="url" placeholder="https://example.com" required autoComplete="off" value={urlInput} onChange={(event) => setUrlInput(event.target.value)} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="add-title">Title</FieldLabel>
-              <Input id="add-title" name="title" type="text" placeholder={domainHint} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="add-tags">Tags</FieldLabel>
-              <Input id="add-tags" name="tags" type="text" placeholder="design, inspiration, dashboard" />
-              <FieldHint>Optional, comma-separated.</FieldHint>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="add-note">Note</FieldLabel>
-              <Textarea id="add-note" name="note" rows={2} placeholder="Why did you save this?" className="resize-none" />
-              <FieldHint>Optional.</FieldHint>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="add-folder">Folder</FieldLabel>
-              <FolderSelector
-                id="add-folder"
-                name="folder_id"
-                value={selectedFolderId}
-                onChange={setSelectedFolderId}
-              />
-              <FieldHint>Optional. You can always move it later.</FieldHint>
-            </Field>
+      <DialogContent className="abm-modal p-0 gap-0 overflow-hidden border-none shadow-[var(--shadow-lg)] max-w-[420px]">
+        {/* Header */}
+        <div className="abm-header">
+          <div className="abm-header-text pr-8">
+            <DialogTitle className="abm-title">Save bookmark</DialogTitle>
+            <span className="abm-subtitle">
+              {phase === "saved"
+                ? "Saved! Nyabag is enriching it."
+                : "Paste a URL and Nyabag will handle the rest."}
+            </span>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>Cancel</Button>
-            <Button type="submit" disabled={isPending}>
-              <HugeIcon icon={IconSave} /> {isPending ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </form>
+        </div>
+
+        {/* URL Input Row */}
+        <div className="abm-url-row">
+          <div className={`abm-url-wrap${error ? " is-error" : ""}${urlValid ? " is-valid" : ""}`}>
+            <Input
+              ref={inputRef}
+              id="abm-url"
+              name="url"
+              type="text"
+              inputMode="url"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="Paste URL here…"
+              value={urlInput}
+              disabled={isBusy || phase === "saved"}
+              onChange={(e) => {
+                setUrlInput(e.target.value);
+                setError("");
+              }}
+              onKeyDown={handleKeyDown}
+              className="abm-url-input"
+              aria-label="URL"
+            />
+          </div>
+
+          {error && (
+            <p className="abm-error" role="alert">{error}</p>
+          )}
+        </div>
+
+        {/* Preview card — only mounted when URL is valid */}
+        {urlValid && (
+          <div className={`abm-preview${previewVisible ? " is-visible" : ""}`}>
+            <div className="abm-site-card">
+              <div className="abm-favicon-wrap">
+                {faviconUrl ? (
+                  <img
+                    src={faviconUrl}
+                    alt=""
+                    className="abm-favicon"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <span className="abm-favicon-letter">
+                    {domain.charAt(0).toUpperCase() || "?"}
+                  </span>
+                )}
+              </div>
+              <div className="abm-site-info">
+                <span className="abm-site-title">
+                  {domain.charAt(0).toUpperCase()}{domain.slice(1)}
+                </span>
+                <span className="abm-site-domain">{domain}</span>
+              </div>
+              <div className="abm-site-badge">
+                {phase === "saving" ? (
+                  <span className="abm-badge abm-badge--saving">
+                    <HugeIcon icon={IconLoader} size={12} className="abm-spin" />
+                    Saving
+                  </span>
+                ) : phase === "saved" ? (
+                  <span className="abm-badge abm-badge--saved">
+                    <HugeIcon icon={IconCheck} size={12} />
+                    Saved
+                  </span>
+                ) : (
+                  <span className="abm-badge abm-badge--ready">Ready</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer — only mounted when URL is valid */}
+        {urlValid && (
+        <div className={`abm-footer${previewVisible ? " is-visible" : ""}`}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            disabled={isBusy}
+            className="abm-btn-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!urlValid || isBusy || phase === "saved"}
+            className="abm-btn-save"
+          >
+            {phase === "saving" ? (
+              <>
+                <HugeIcon icon={IconLoader} size={14} className="abm-spin" />
+                Saving…
+              </>
+            ) : phase === "saved" ? (
+              <>
+                <HugeIcon icon={IconCheck} size={14} />
+                Saved
+              </>
+            ) : (
+              <>
+                Save
+                <HugeIcon icon={IconArrowRight} size={14} />
+              </>
+            )}
+          </Button>
+        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

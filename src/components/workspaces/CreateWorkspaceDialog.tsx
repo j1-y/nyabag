@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createWorkspace } from "@/lib/workspace-actions";
 import type { Workspace } from "@/lib/types";
@@ -47,16 +47,15 @@ export function CreateWorkspaceDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <form action={handleSubmit}>
-          <DialogHeader>
+          <DialogHeader className="border-none">
             <DialogTitle>Create workspace</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="pr-8">
               Create a separate space for bookmarks, captures, folders, and canvas notes.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 p-4">
             <Field>
-              <FieldLabel htmlFor="workspace-name">Name</FieldLabel>
               <Input
                 id="workspace-name"
                 name="name"
@@ -68,7 +67,7 @@ export function CreateWorkspaceDialog({
             </Field>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="border-none">
             <Button
               type="button"
               variant="outline"

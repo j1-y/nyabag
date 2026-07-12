@@ -22,7 +22,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 import { setActiveWorkspace } from "@/lib/workspace-actions";
 import type { Workspace, WorkspaceRole } from "@/lib/types";
 import { CreateWorkspaceDialog } from "./CreateWorkspaceDialog";
@@ -46,12 +45,7 @@ function workspaceInitials(name: string) {
   );
 }
 
-function roleLabel(role: WorkspaceRole) {
-  if (role === "owner") return "Owner";
-  if (role === "admin") return "Admin";
-  if (role === "member") return "Member";
-  return "Viewer";
-}
+
 
 function canRename(role: WorkspaceRole) {
   return role === "owner" || role === "admin";
@@ -145,11 +139,7 @@ export function WorkspaceSwitcher({
 
           <DropdownMenuSeparator />
 
-          <div className="flex items-center justify-between px-2 py-2">
-            <Badge variant="secondary" size="sm">
-              {roleLabel(activeWorkspaceRole)}
-            </Badge>
-          </div>
+
 
           <DropdownMenuItem
             onSelect={(event) => {

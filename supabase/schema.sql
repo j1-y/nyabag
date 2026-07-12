@@ -135,15 +135,20 @@ $$;
 ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
 
+CREATE OR REPLACE FUNCTION get_user_workspace_ids()
+RETURNS SETOF UUID
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid();
+$$;
+
 DROP POLICY IF EXISTS "select_member_workspaces" ON workspaces;
 CREATE POLICY "select_member_workspaces" ON workspaces
   FOR SELECT USING (
     owner_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM workspace_members wm
-      WHERE wm.workspace_id = workspaces.id
-        AND wm.user_id = auth.uid()
-    )
+    OR id IN (SELECT get_user_workspace_ids())
   );
 
 DROP POLICY IF EXISTS "insert_own_workspaces" ON workspaces;
@@ -162,41 +167,31 @@ DROP POLICY IF EXISTS "select_own_workspace_members" ON workspace_members;
 CREATE POLICY "select_own_workspace_members" ON workspace_members
   FOR SELECT USING (
     user_id = auth.uid()
-    OR EXISTS (
-      SELECT 1 FROM workspaces w
-      WHERE w.id = workspace_members.workspace_id
-        AND w.owner_id = auth.uid()
-    )
+    OR workspace_id IN (SELECT get_user_workspace_ids())
   );
 
 DROP POLICY IF EXISTS "insert_owner_workspace_members" ON workspace_members;
 CREATE POLICY "insert_owner_workspace_members" ON workspace_members
   FOR INSERT WITH CHECK (
     user_id = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM workspaces w
-      WHERE w.id = workspace_members.workspace_id
-        AND w.owner_id = auth.uid()
+    OR workspace_id IN (
+      SELECT id FROM workspaces WHERE owner_id = auth.uid()
     )
   );
 
 DROP POLICY IF EXISTS "update_owner_workspace_members" ON workspace_members;
 CREATE POLICY "update_owner_workspace_members" ON workspace_members
   FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM workspaces w
-      WHERE w.id = workspace_members.workspace_id
-        AND w.owner_id = auth.uid()
+    workspace_id IN (
+      SELECT id FROM workspaces WHERE owner_id = auth.uid()
     )
   );
 
 DROP POLICY IF EXISTS "delete_owner_workspace_members" ON workspace_members;
 CREATE POLICY "delete_owner_workspace_members" ON workspace_members
   FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM workspaces w
-      WHERE w.id = workspace_members.workspace_id
-        AND w.owner_id = auth.uid()
+    workspace_id IN (
+      SELECT id FROM workspaces WHERE owner_id = auth.uid()
     )
   );
 

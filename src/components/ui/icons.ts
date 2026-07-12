@@ -3,7 +3,7 @@ export {
   ArrowDown01Icon as IconArrowDown,
   ArrowLeft01Icon as IconArrowLeft,
   ArrowRight01Icon as IconArrowRight,
-  ArrowUpDownIcon as IconChevronsUpDown,
+  UnfoldMoreIcon as IconChevronsUpDown,
   ArrowUpRight01Icon as IconArrowUpRight,
   Bookmark01Icon as IconBookmark,
   BubbleChatIcon as IconMessage,
