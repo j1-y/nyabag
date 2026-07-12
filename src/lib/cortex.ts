@@ -13,9 +13,13 @@ export type CortexBookmarkIngestPayload = {
 export type CortexBookmarkIngestResponse = {
   memoryId?: string;
   autoTags?: string[];
+  tags?: string[];
   palette?: string[];
   fonts?: string[];
   summary?: string;
+  contentPreview?: string;
+  designSummary?: string;
+  ai_description?: string;
 };
 
 export type CortexBookmarkDeletePayload = {

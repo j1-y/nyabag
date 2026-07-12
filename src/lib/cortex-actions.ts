@@ -218,10 +218,10 @@ export async function ingestReadyBookmarksToCortex(
         error: null,
         memoryId: response.memoryId ?? null,
         ingestedAt: new Date().toISOString(),
-        tags: response.autoTags,
+        tags: response.autoTags ?? response.tags,
         palette: response.palette,
         fonts: response.fonts,
-        summary: response.summary,
+        summary: response.summary ?? response.contentPreview ?? response.designSummary ?? response.ai_description,
       });
       counts.ingested += 1;
     }
