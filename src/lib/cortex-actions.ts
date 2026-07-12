@@ -45,6 +45,9 @@ async function markCortexStatus({
   error,
   memoryId,
   ingestedAt,
+  tags,
+  palette,
+  fonts,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   bookmarkId: string;
@@ -54,15 +57,26 @@ async function markCortexStatus({
   error?: string | null;
   memoryId?: string | null;
   ingestedAt?: string | null;
+  tags?: string[];
+  palette?: string[];
+  fonts?: string[];
+  summary?: string;
 }) {
+  const updateData: any = {
+    cortex_status: status,
+    cortex_error: error ?? null,
+    cortex_memory_id: memoryId ?? null,
+    cortex_ingested_at: ingestedAt ?? null,
+  };
+
+  if (tags && tags.length > 0) updateData.tags = tags;
+  if (palette && palette.length > 0) updateData.palette = palette;
+  if (fonts && fonts.length > 0) updateData.fonts = fonts;
+  if (summary) updateData.summary = summary;
+
   await supabase
     .from("bookmarks")
-    .update({
-      cortex_status: status,
-      cortex_error: error ?? null,
-      cortex_memory_id: memoryId ?? null,
-      cortex_ingested_at: ingestedAt ?? null,
-    })
+    .update(updateData)
     .eq("id", bookmarkId)
     .eq("user_id", userId)
     .eq("workspace_id", workspaceId);
@@ -203,6 +217,10 @@ export async function ingestReadyBookmarksToCortex(
         error: null,
         memoryId: response.memoryId ?? null,
         ingestedAt: new Date().toISOString(),
+        tags: response.autoTags,
+        palette: response.palette,
+        fonts: response.fonts,
+        summary: response.summary,
       });
       counts.ingested += 1;
     }
