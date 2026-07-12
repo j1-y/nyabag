@@ -231,6 +231,7 @@ export function NotesProvider({
           const draftNote: CanvasNote = {
             id: draftId,
             user_id: "draft",
+            workspace_id: "draft",
             section_id: null,
             type,
             content: "",
