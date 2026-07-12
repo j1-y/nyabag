@@ -16,12 +16,13 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+import { useCanvasStore } from "@/features/canvas/store/useCanvasStore";
+
 interface ResizeHandlesProps {
   note: CanvasNote;
-  viewport: CanvasViewport;
 }
 
-export function ResizeHandles({ note, viewport }: ResizeHandlesProps) {
+export function ResizeHandles({ note }: ResizeHandlesProps) {
   const { setNotePosition, setNoteSize, commitPosition, commitSize } = useNotes();
   const dragRef = useRef<{
     dir: Direction;
@@ -65,8 +66,9 @@ export function ResizeHandles({ note, viewport }: ResizeHandlesProps) {
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragRef.current) return;
     const { dir, startPX, startPY, startW, startH, startX, startY } = dragRef.current;
-    const dx = (e.clientX - startPX) / viewport.scale;
-    const dy = (e.clientY - startPY) / viewport.scale;
+    const scale = useCanvasStore.getState().viewport.scale;
+    const dx = (e.clientX - startPX) / scale;
+    const dy = (e.clientY - startPY) / scale;
     const shouldSnap = !e.altKey;
 
     let newW = startW;

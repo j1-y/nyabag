@@ -1,7 +1,7 @@
 "use client";
 
 import { HugeIcon } from "@/components/ui/huge-icon";
-import { IconArrowDown, IconCheck, IconCheckSquare, IconDelete, IconLink, IconList, IconOrderedList, IconText } from "@/components/ui/icons";
+import { IconArrowDown, IconCheck, IconCheckSquare, IconDelete, IconLink, IconList, IconOrderedList, IconText, IconBold, IconItalic, IconUnderline, IconStrikethrough } from "@/components/ui/icons";
 ;
 import {
   useCallback,
@@ -20,7 +20,6 @@ import type { CanvasNote } from "@/lib/types";
 interface StickyNoteToolbarProps {
   note: CanvasNote;
   formatRef: RefObject<StickyNoteTextHandle | null>;
-  viewportScale: number;
   placement: "above" | "below";
 }
 
@@ -30,28 +29,26 @@ const FORMAT_BUTTONS: Array<{
   title: string;
   icon?: ReactNode;
 }> = [
-  { action: "heading", label: "H", title: "Heading", icon: <HugeIcon icon={IconText} size={18} /> },
-  { action: "bold", label: "B", title: "Bold" },
-  { action: "italic", label: "I", title: "Italic" },
-  { action: "underline", label: "U", title: "Underline" },
-  { action: "strike", label: "S", title: "Strikethrough" },
-  { action: "bullet", label: "List", title: "Bulleted list", icon: <HugeIcon icon={IconList} size={18} /> },
-  { action: "ordered", label: "1", title: "Ordered list", icon: <HugeIcon icon={IconOrderedList} size={18} /> },
-  { action: "todo", label: "Todo", title: "Todo list", icon: <HugeIcon icon={IconCheckSquare} size={18} /> },
-  { action: "link", label: "Link", title: "Link", icon: <HugeIcon icon={IconLink} size={18} /> },
+  { action: "heading", label: "H", title: "Heading", icon: <HugeIcon icon={IconText} size={14} strokeWidth={1.5} /> },
+  { action: "bold", label: "B", title: "Bold", icon: <HugeIcon icon={IconBold} size={14} strokeWidth={1.5} /> },
+  { action: "italic", label: "I", title: "Italic", icon: <HugeIcon icon={IconItalic} size={14} strokeWidth={1.5} /> },
+  { action: "underline", label: "U", title: "Underline", icon: <HugeIcon icon={IconUnderline} size={14} strokeWidth={1.5} /> },
+  { action: "strike", label: "S", title: "Strikethrough", icon: <HugeIcon icon={IconStrikethrough} size={14} strokeWidth={1.5} /> },
+  { action: "bullet", label: "List", title: "Bulleted list", icon: <HugeIcon icon={IconList} size={14} strokeWidth={1.5} /> },
+  { action: "ordered", label: "1", title: "Ordered list", icon: <HugeIcon icon={IconOrderedList} size={14} strokeWidth={1.5} /> },
+  { action: "todo", label: "Todo", title: "Todo list", icon: <HugeIcon icon={IconCheckSquare} size={14} strokeWidth={1.5} /> },
+  { action: "link", label: "Link", title: "Link", icon: <HugeIcon icon={IconLink} size={14} strokeWidth={1.5} /> },
 ];
 
 export function StickyNoteToolbar({
   note,
   formatRef,
-  viewportScale,
   placement,
 }: StickyNoteToolbarProps) {
   const { deleteNote, updateColor } = useNotes();
   const [colorOpen, setColorOpen] = useState(false);
   const [activeActions, setActiveActions] = useState<Set<StickyNoteFormatAction>>(() => new Set());
   const toolbarRef = useRef<HTMLDivElement>(null);
-  const inverseScale = viewportScale > 0 ? 1 / viewportScale : 1;
 
   const refreshActiveActions = useCallback(() => {
     const next = new Set<StickyNoteFormatAction>();
@@ -85,7 +82,6 @@ export function StickyNoteToolbar({
     <div
       ref={toolbarRef}
       className={`sticky-note-toolbar sticky-note-toolbar--${placement}`}
-      style={{ "--sticky-toolbar-scale": inverseScale } as CSSProperties}
       onPointerDown={(e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -108,7 +104,7 @@ export function StickyNoteToolbar({
           }}
         >
           <span className="sticky-note-current-color" style={{ background: note.color }} />
-          <HugeIcon icon={IconArrowDown} size={18} />
+          <HugeIcon icon={IconArrowDown} size={14} strokeWidth={1.5} />
         </button>
 
         {colorOpen && (
@@ -132,7 +128,7 @@ export function StickyNoteToolbar({
                       formatRef.current?.focus();
                     }}
                   >
-                    {isActive && <HugeIcon icon={IconCheck} size={18} />}
+                    {isActive && <HugeIcon icon={IconCheck} size={14} strokeWidth={1.5} />}
                   </button>
                 );
               })}
@@ -172,7 +168,7 @@ export function StickyNoteToolbar({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="sticky-note-toolbar-button sticky-note-toolbar-button--delete"
+        className="sticky-note-toolbar-button sticky-note-toolbar-button--delete [&_svg]:size-[14px]"
         title="Delete note"
         aria-label="Delete note"
         onPointerDown={(e) => {
@@ -181,7 +177,7 @@ export function StickyNoteToolbar({
           void deleteNote(note.id);
         }}
       >
-        <HugeIcon icon={IconDelete} size={18} />
+        <HugeIcon icon={IconDelete} size={14} strokeWidth={1.5} />
       </IconButton>
     </div>
   );

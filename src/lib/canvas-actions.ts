@@ -202,32 +202,7 @@ function clampNoteHeight(value: number) {
   return Math.min(900, Math.max(80, Math.ceil(value)));
 }
 
-async function getXPostEmbedMetadata(url: string): Promise<ActionResult<{ html: string; width: number; height: number }>> {
-  try {
-    const endpoint = new URL("https://publish.twitter.com/oembed");
-    endpoint.searchParams.set("url", url);
-    endpoint.searchParams.set("omit_script", "true");
-    endpoint.searchParams.set("dnt", "true");
-    endpoint.searchParams.set("theme", "light");
 
-    const response = await fetch(endpoint.toString(), { cache: "no-store" });
-    if (!response.ok) return { success: false, error: "X could not render this post" };
-
-    const json = await response.json();
-    const html = typeof json?.html === "string" ? json.html : "";
-    if (!html || !html.includes("twitter-tweet")) {
-      return { success: false, error: "X did not return an embeddable post" };
-    }
-
-    const fallback = getSocialEmbedFallbackSize("x");
-    const width = typeof json?.width === "number" && Number.isFinite(json.width) ? json.width : fallback.width;
-    const height = typeof json?.height === "number" && Number.isFinite(json.height) ? json.height : fallback.height;
-
-    return { success: true, data: { html, width, height } };
-  } catch {
-    return { success: false, error: "X embed failed to load" };
-  }
-}
 
 export async function createNote(
   type: NoteType,
@@ -445,23 +420,7 @@ export async function createSocialNoteFromUrl(
     };
   }
 
-  let embedSize = getSocialEmbedFallbackSize(embed.provider);
-
-  if (embed.provider === "x") {
-    const metadata = await getXPostEmbedMetadata(embed.url);
-
-    if (!metadata.success) {
-      return {
-        success: false,
-        error: metadata.error,
-      };
-    }
-
-    embedSize = {
-      width: metadata.data.width,
-      height: metadata.data.height,
-    };
-  }
+  const embedSize = getSocialEmbedFallbackSize(embed.provider);
 
   const width = clampNoteWidth(embedSize.width + NOTE_CHROME_WIDTH);
   const height = clampNoteHeight(embedSize.height + NOTE_CHROME_HEIGHT);
@@ -1364,19 +1323,5 @@ export async function deleteSection(id: string): Promise<ActionResult> {
   return { success: true, data: undefined };
 }
 
-export async function getXPostEmbedHtml(url: string): Promise<ActionResult<string>> {
-  const supabase = await createClient();
-  const user = await getUser(supabase);
-  if (!user) return { success: false, error: "Not authenticated" };
 
-  const parsed = parseSocialEmbed(url);
-  if (!parsed || parsed.provider !== "x") {
-    return { success: false, error: "Must be a valid X or Twitter post URL" };
-  }
-
-  const metadata = await getXPostEmbedMetadata(parsed.url);
-  return metadata.success
-    ? { success: true, data: metadata.data.html }
-    : { success: false, error: metadata.error };
-}
 

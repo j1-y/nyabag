@@ -9,18 +9,15 @@ import type { CanvasNote } from "@/lib/types";
 
 interface SocialNoteToolbarProps {
   note: CanvasNote;
-  viewportScale: number;
   placement: "above" | "below";
 }
 
-export function SocialNoteToolbar({ note, viewportScale, placement }: SocialNoteToolbarProps) {
+export function SocialNoteToolbar({ note, placement }: SocialNoteToolbarProps) {
   const { deleteNote } = useNotes();
-  const inverseScale = viewportScale > 0 ? 1 / viewportScale : 1;
 
   return (
     <div
       className={`social-note-toolbar social-note-toolbar--${placement}`}
-      style={{ "--sticky-toolbar-scale": inverseScale } as React.CSSProperties}
       onPointerDown={(e) => {
         e.stopPropagation();
         e.preventDefault();

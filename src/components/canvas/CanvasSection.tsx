@@ -3,15 +3,14 @@
 import { HugeIcon } from "@/components/ui/huge-icon";
 import { IconDelete, IconPencil } from "@/components/ui/icons";
 import { useMemo, useRef, useState } from "react";
-;
 import { useNotes } from "@/hooks/useNotes";
 import { maybeSnap } from "@/lib/canvas-grid";
 import { IconButton } from "@/components/ui/icon-button";
-import type { CanvasSection as CanvasSectionType, CanvasViewport } from "@/lib/types";
+import type { CanvasSection as CanvasSectionType } from "@/lib/types";
+import { useCanvasStore } from "@/features/canvas/store/useCanvasStore";
 
 interface Props {
   section: CanvasSectionType;
-  viewport: CanvasViewport;
 }
 
 const MIN_W = 180;
@@ -23,7 +22,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-export function CanvasSection({ section, viewport }: Props) {
+export function CanvasSection({ section }: Props) {
   const {
     notes,
     setNotePositions,
@@ -99,8 +98,9 @@ export function CanvasSection({ section, viewport }: Props) {
 
   function moveDrag(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragRef.current) return;
-    const dx = (e.clientX - dragRef.current.startPX) / viewport.scale;
-    const dy = (e.clientY - dragRef.current.startPY) / viewport.scale;
+    const scale = useCanvasStore.getState().viewport.scale;
+    const dx = (e.clientX - dragRef.current.startPX) / scale;
+    const dy = (e.clientY - dragRef.current.startPY) / scale;
     const nextX = maybeSnap(dragRef.current.startX + dx, !e.altKey);
     const nextY = maybeSnap(dragRef.current.startY + dy, !e.altKey);
     const snappedDx = nextX - dragRef.current.startX;
@@ -149,8 +149,9 @@ export function CanvasSection({ section, viewport }: Props) {
 
   function moveResize(e: React.PointerEvent<HTMLDivElement>) {
     if (!resizeRef.current) return;
-    const dx = (e.clientX - resizeRef.current.startPX) / viewport.scale;
-    const dy = (e.clientY - resizeRef.current.startPY) / viewport.scale;
+    const scale = useCanvasStore.getState().viewport.scale;
+    const dx = (e.clientX - resizeRef.current.startPX) / scale;
+    const dy = (e.clientY - resizeRef.current.startPY) / scale;
     const width = clamp(
       maybeSnap(clamp(resizeRef.current.startW + dx, MIN_W, MAX_W), !e.altKey),
       MIN_W,

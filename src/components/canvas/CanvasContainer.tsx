@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import type { NoteType } from "@/lib/types";
+import type { NoteType, CanvasViewport } from "@/lib/types";
+import { useCanvasStore } from "@/features/canvas/store/useCanvasStore";
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 4.0;
@@ -73,8 +74,6 @@ export function CanvasContainer() {
     setPendingMediaNote,
     isCreatingMediaNote,
     mediaPlacementError,
-    viewport,
-    setViewport,
     setSelectedId,
     setSelectedIds,
     selectedIds,
@@ -84,14 +83,12 @@ export function CanvasContainer() {
     wrapSelectionInSection,
   } = useNotes();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const canvasWorldRef = useRef<HTMLDivElement>(null);
   const isPanningRef = useRef(false);
   const isSelectingRef = useRef(false);
   const isSpaceDownRef = useRef(false);
-  const panStartRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0, viewport: { x: 0, y: 0, scale: 1 } });
   const selectStartRef = useRef({ x: 0, y: 0 });
-  const viewportRef = useRef(viewport);
-  const viewportFrameRef = useRef<number | null>(null);
-  const nextViewportRef = useRef(viewport);
   const [selectionRect, setSelectionRect] = useState<{
     left: number;
     top: number;
@@ -111,36 +108,44 @@ export function CanvasContainer() {
   const [isPanning, setIsPanning] = useState(false);
 
   useEffect(() => {
-    viewportRef.current = viewport;
-    nextViewportRef.current = viewport;
-  }, [viewport]);
+    const applyViewport = (viewport: CanvasViewport) => {
+      const { x, y, scale } = viewport;
+      const gridSize = SNAP_SIZE * scale;
+      const bgX = ((x % gridSize) + gridSize) % gridSize;
+      const bgY = ((y % gridSize) + gridSize) % gridSize;
 
-  useEffect(
-    () => () => {
-      if (viewportFrameRef.current !== null) cancelAnimationFrame(viewportFrameRef.current);
-    },
-    []
-  );
+      if (wrapperRef.current) {
+        wrapperRef.current.style.setProperty("--canvas-x", `${x}px`);
+        wrapperRef.current.style.setProperty("--canvas-y", `${y}px`);
+        wrapperRef.current.style.setProperty("--canvas-scale", `${scale}`);
+        wrapperRef.current.style.setProperty("--canvas-grid-size", `${gridSize}px`);
+        wrapperRef.current.style.setProperty("--canvas-bg-x", `${bgX}px`);
+        wrapperRef.current.style.setProperty("--canvas-bg-y", `${bgY}px`);
+      }
 
-  const scheduleViewport = useCallback(
-    (nextViewport: typeof viewport) => {
-      nextViewportRef.current = nextViewport;
-      viewportRef.current = nextViewport;
-      if (viewportFrameRef.current !== null) return;
-      viewportFrameRef.current = requestAnimationFrame(() => {
-        viewportFrameRef.current = null;
-        setViewport(nextViewportRef.current);
-      });
-    },
-    [setViewport]
-  );
+      if (canvasWorldRef.current) {
+        canvasWorldRef.current.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+      }
+    };
+    
+    applyViewport(useCanvasStore.getState().viewport);
+
+    return useCanvasStore.subscribe((state, prevState) => {
+      if (state.viewport !== prevState.viewport) {
+        applyViewport(state.viewport);
+      }
+    });
+  }, []);
 
   const handleCanvasWheel = useCallback(
     (e: WheelEvent, allowPan: boolean) => {
       const el = wrapperRef.current;
       if (!el) return;
 
-      const prev = viewportRef.current;
+      const prev = useCanvasStore.getState().viewport;
+      
+      const isTouchpadPan = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL && Math.abs(e.deltaX) > 0;
+      
       const deltaFactor =
         e.deltaMode === WheelEvent.DOM_DELTA_LINE
           ? WHEEL_LINE_HEIGHT
@@ -148,10 +153,13 @@ export function CanvasContainer() {
             ? el.clientHeight
             : 1;
 
+      // Trackpad pinch-to-zoom sends ctrlKey=true natively
       if (!e.ctrlKey) {
         if (!allowPan) return;
         if (e.cancelable) e.preventDefault();
-        scheduleViewport({
+        
+        // Use standard panning
+        useCanvasStore.getState().setViewport({
           ...prev,
           x: prev.x - e.deltaX * deltaFactor,
           y: prev.y - e.deltaY * deltaFactor,
@@ -163,16 +171,20 @@ export function CanvasContainer() {
       const rect = el.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-      const zoomFactor = Math.exp(-e.deltaY * deltaFactor * 0.002);
+      
+      // Fine-tune pinch to zoom intensity based on if it's a trackpad or mouse wheel
+      const zoomIntensity = e.deltaMode === WheelEvent.DOM_DELTA_PIXEL ? 0.01 : 0.002;
+      const zoomFactor = Math.exp(-e.deltaY * deltaFactor * zoomIntensity);
+      
       const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * zoomFactor));
       const ratio = newScale / prev.scale;
-      scheduleViewport({
+      useCanvasStore.getState().setViewport({
         x: mouseX - (mouseX - prev.x) * ratio,
         y: mouseY - (mouseY - prev.y) * ratio,
         scale: newScale,
       });
     },
-    [scheduleViewport]
+    []
   );
 
   const startPan = useCallback(
@@ -180,13 +192,15 @@ export function CanvasContainer() {
       setContextMenu(null);
       isPanningRef.current = true;
       setIsPanning(true);
+      const viewport = useCanvasStore.getState().viewport;
       panStartRef.current = {
-        x: e.clientX - viewport.x,
-        y: e.clientY - viewport.y,
+        x: e.clientX,
+        y: e.clientY,
+        viewport,
       };
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     },
-    [viewport.x, viewport.y]
+    []
   );
 
   const canPlaceActiveTool = Boolean(
@@ -205,6 +219,8 @@ export function CanvasContainer() {
         activeNoteTool === "image" && pendingMediaNote?.source === "upload"
           ? fitImageNoteSize(pendingMediaNote.width, pendingMediaNote.height)
           : NOTE_DEFAULT_SIZE[activeNoteTool];
+      
+      const viewport = useCanvasStore.getState().viewport;
       const canvasX = maybeSnap((clientX - rect.left - viewport.x) / viewport.scale, shouldSnap);
       const canvasY = maybeSnap((clientY - rect.top - viewport.y) / viewport.scale, shouldSnap);
 
@@ -219,7 +235,7 @@ export function CanvasContainer() {
         screenHeight: size.height * viewport.scale,
       };
     },
-    [activeNoteTool, pendingMediaNote, viewport.scale, viewport.x, viewport.y]
+    [activeNoteTool, pendingMediaNote]
   );
 
   const handlePointerDownCapture = useCallback(
@@ -308,10 +324,11 @@ export function CanvasContainer() {
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (isPanningRef.current) {
         setPlacementPreview(null);
-        scheduleViewport({
-          ...viewportRef.current,
-          x: e.clientX - panStartRef.current.x,
-          y: e.clientY - panStartRef.current.y,
+        const prev = panStartRef.current.viewport;
+        useCanvasStore.getState().setViewport({
+          ...prev,
+          x: prev.x + (e.clientX - panStartRef.current.x),
+          y: prev.y + (e.clientY - panStartRef.current.y),
         });
         return;
       }
@@ -352,7 +369,7 @@ export function CanvasContainer() {
         setSelectionRect({ left, top, width, height });
       }
     },
-    [activeNoteTool, canPlaceActiveTool, getPlacement, placementPreview, scheduleViewport]
+    [activeNoteTool, canPlaceActiveTool, getPlacement, placementPreview]
   );
 
   const handlePointerUp = useCallback((e?: React.PointerEvent<HTMLDivElement>) => {
@@ -361,6 +378,7 @@ export function CanvasContainer() {
     setIsPanning(false);
     if (isSelectingRef.current && selectionRect && wrapperRef.current) {
       const rect = wrapperRef.current.getBoundingClientRect();
+      const viewport = useCanvasStore.getState().viewport;
       const canvasLeft = (selectionRect.left - rect.left - viewport.x) / viewport.scale;
       const canvasTop = (selectionRect.top - rect.top - viewport.y) / viewport.scale;
       const canvasRight = canvasLeft + selectionRect.width / viewport.scale;
@@ -385,9 +403,6 @@ export function CanvasContainer() {
     notes,
     selectionRect,
     setSelectedIds,
-    viewport.x,
-    viewport.y,
-    viewport.scale,
   ]);
 
   useEffect(() => {
@@ -428,7 +443,10 @@ export function CanvasContainer() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space") isSpaceDownRef.current = true;
+      if (e.code === "Space") {
+        isSpaceDownRef.current = true;
+        document.body.style.cursor = "grab";
+      }
       const target = e.target as HTMLElement;
       const tag = target.tagName;
       const isTyping =
@@ -461,13 +479,17 @@ export function CanvasContainer() {
       }
     };
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === "Space") isSpaceDownRef.current = false;
+      if (e.code === "Space") {
+        isSpaceDownRef.current = false;
+        document.body.style.cursor = "";
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      document.body.style.cursor = "";
     };
   }, [deleteNotes, selectedIds, setActiveNoteTool, setPendingMediaNote, setSelectedId, setToolMode]);
 
@@ -493,24 +515,10 @@ export function CanvasContainer() {
     if (result.success) setSectionLabel("Section");
   }
 
-  const { x, y, scale } = viewport;
-  const gridSize = SNAP_SIZE * scale;
-  const bgX = ((x % gridSize) + gridSize) % gridSize;
-  const bgY = ((y % gridSize) + gridSize) % gridSize;
-
   return (
     <div
       ref={wrapperRef}
       className={`canvas-wrapper canvas-wrapper--${toolMode}${isPanning ? " canvas-wrapper--panning" : ""}${activeNoteTool ? " canvas-wrapper--placing" : ""}`}
-      style={
-        {
-          "--canvas-x": `${x}px`,
-          "--canvas-y": `${y}px`,
-          "--canvas-grid-size": `${gridSize}px`,
-          "--canvas-bg-x": `${bgX}px`,
-          "--canvas-bg-y": `${bgY}px`,
-        } as React.CSSProperties
-      }
       onPointerDown={handlePointerDown}
       onPointerDownCapture={handlePointerDownCapture}
       onPointerMove={handlePointerMove}
@@ -547,14 +555,14 @@ export function CanvasContainer() {
         </div>
       )}
       <div
+        ref={canvasWorldRef}
         className="canvas-world"
-        style={{ transform: `translate(${x}px, ${y}px) scale(${scale})` }}
       >
         {sections.map((section) => (
-          <CanvasSection key={section.id} section={section} viewport={viewport} />
+          <CanvasSection key={section.id} section={section} />
         ))}
         {notes.map((note) => (
-          <CanvasNote key={note.id} note={note} viewport={viewport} />
+          <CanvasNote key={note.id} note={note} />
         ))}
       </div>
       {selectionRect && (

@@ -12,11 +12,11 @@ import { maybeSnap } from "@/lib/canvas-grid";
 import { NOTE_COLORS_REQUIRING_LIGHT_TEXT } from "@/lib/content-colors";
 import { isSocialNoteContent } from "@/lib/social-embeds";
 import type { StickyNoteTextHandle } from "./NoteTextContent";
-import type { CanvasNote as CanvasNoteType, CanvasViewport } from "@/lib/types";
+import type { CanvasNote as CanvasNoteType } from "@/lib/types";
+import { useCanvasStore } from "@/features/canvas/store/useCanvasStore";
 
 interface Props {
   note: CanvasNoteType;
-  viewport: CanvasViewport;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -34,7 +34,7 @@ function getNoteInk(color: string) {
   return LIGHT_TEXT_COLORS.has(color.toUpperCase()) ? "var(--text-inverse)" : "var(--text)";
 }
 
-export function CanvasNote({ note, viewport }: Props) {
+export function CanvasNote({ note }: Props) {
   const {
     notes,
     selectedId,
@@ -89,8 +89,9 @@ export function CanvasNote({ note, viewport }: Props) {
 
   function handleHeaderPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!dragRef.current) return;
-    const dx = (e.clientX - dragRef.current.startPX) / viewport.scale;
-    const dy = (e.clientY - dragRef.current.startPY) / viewport.scale;
+    const scale = useCanvasStore.getState().viewport.scale;
+    const dx = (e.clientX - dragRef.current.startPX) / scale;
+    const dy = (e.clientY - dragRef.current.startPY) / scale;
     const shouldSnap = !e.altKey;
     const anchor = dragRef.current.starts[0];
     const nextAnchorX = maybeSnap(anchor.x + dx, shouldSnap);
@@ -144,7 +145,7 @@ export function CanvasNote({ note, viewport }: Props) {
   const showStickyToolbar = isPrimarySelected && isStickyNote && selectedIds.length === 1;
   const showTextFrameToolbar = isPrimarySelected && isTextFrame && selectedIds.length === 1;
   const showSocialToolbar = isPrimarySelected && isSocialNote && selectedIds.length === 1;
-  const toolbarPlacement = viewport.y + note.y * viewport.scale > 64 ? "above" : "below";
+  const toolbarPlacement = useCanvasStore.getState().viewport.y + note.y * useCanvasStore.getState().viewport.scale > 64 ? "above" : "below";
 
   function handleBodyPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     e.stopPropagation();
@@ -219,7 +220,6 @@ export function CanvasNote({ note, viewport }: Props) {
         <StickyNoteToolbar
           note={note}
           formatRef={textFormatRef}
-          viewportScale={viewport.scale}
           placement={toolbarPlacement}
         />
       )}
@@ -228,7 +228,6 @@ export function CanvasNote({ note, viewport }: Props) {
         <TextFrameToolbar
           note={note}
           formatRef={textFormatRef}
-          viewportScale={viewport.scale}
           placement={toolbarPlacement}
         />
       )}
@@ -236,12 +235,11 @@ export function CanvasNote({ note, viewport }: Props) {
       {showSocialToolbar && (
         <SocialNoteToolbar
           note={note}
-          viewportScale={viewport.scale}
           placement={toolbarPlacement}
         />
       )}
 
-      {isPrimarySelected && <ResizeHandles note={note} viewport={viewport} />}
+      {isPrimarySelected && <ResizeHandles note={note} />}
     </div>
   );
 }

@@ -55,6 +55,7 @@ export default async function DashboardPage() {
         initialBookmarks={initialBookmarks}
         userEmail={user?.email ?? ""}
         profileName={profile?.name ?? ""}
+        workspaceName={workspaceContext?.activeWorkspace.name}
       />
     );
   });

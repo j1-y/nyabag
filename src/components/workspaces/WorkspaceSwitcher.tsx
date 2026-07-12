@@ -60,6 +60,7 @@ export function WorkspaceSwitcher({
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
+  const [switchingTo, setSwitchingTo] = useState<Workspace | null>(null);
   const [isPending, startTransition] = useTransition();
   const activeInitials = useMemo(
     () => workspaceInitials(activeWorkspace.name),
@@ -67,12 +68,21 @@ export function WorkspaceSwitcher({
   );
 
   function switchWorkspace(workspaceId: string) {
-    if (workspaceId === activeWorkspace.id || isPending) return;
+    if (workspaceId === activeWorkspace.id || isPending || switchingTo) return;
+
+    const targetWorkspace = workspaces.find((w) => w.id === workspaceId);
+    if (!targetWorkspace) return;
+
+    setSwitchingTo(targetWorkspace);
 
     startTransition(async () => {
       const result = await setActiveWorkspace(workspaceId);
       if (result.success) {
-        router.refresh();
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 800);
+      } else {
+        setSwitchingTo(null);
       }
     });
   }
@@ -126,7 +136,6 @@ export function WorkspaceSwitcher({
               <DropdownMenuItem
                 key={workspace.id}
                 onSelect={(event) => {
-                  event.preventDefault();
                   switchWorkspace(workspace.id);
                 }}
                 className="justify-between"
@@ -176,6 +185,49 @@ export function WorkspaceSwitcher({
         workspace={activeWorkspace}
         onRenamed={() => router.refresh()}
       />
+
+      {switchingTo && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: "#000",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#fff",
+            animation: "fadeIn 0.3s ease forwards",
+          }}
+        >
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+          `}} />
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              backgroundColor: "#222",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 20,
+              fontWeight: 600,
+              marginBottom: 24,
+            }}
+          >
+            {workspaceInitials(switchingTo.name)}
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 500, margin: 0, marginBottom: 8, letterSpacing: "-0.02em" }}>
+            Switching workspace...
+          </h2>
+          <p style={{ color: "#888", fontSize: 16, margin: 0 }}>
+            {switchingTo.name}
+          </p>
+        </div>
+      )}
     </>
   );
 }

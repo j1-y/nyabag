@@ -20,45 +20,39 @@ function getFirstName(profileName: string, userEmail: string) {
   return source.split(/[._\-\s]+/).filter(Boolean)[0] || "there";
 }
 
-function getLocalGreetingPrefix(date: Date) {
-  const day = date.getDay();
-  const hour = date.getHours();
-
-  if (day === 0) return "Sunday moodboardmaxxing";
-  if (day === 6) return "Weekend inspo haul";
-  if (hour < 12) return "Coffee and pixels";
-  if (hour < 17) return "Designmaxxing today";
-  if (hour < 21) return "Evening reference raid";
-  return "Late-night idea dump";
-}
 
 function DashboardGreeting({
   profileName,
   userEmail,
   onNewBookmark,
   onImportReferences,
+  workspaceName,
 }: {
   profileName: string;
   userEmail: string;
   onNewBookmark: () => void;
   onImportReferences: () => void;
+  workspaceName?: string;
 }) {
-  const [prefix, setPrefix] = useState("Design references");
+  const ws = workspaceName || "Personal";
+  const [prefix, setPrefix] = useState(`${ws} workspace`);
   const firstName = useMemo(() => getFirstName(profileName, userEmail), [profileName, userEmail]);
 
   useEffect(() => {
-    function updateGreeting() {
-      setPrefix(getLocalGreetingPrefix(new Date()));
-    }
-
-    updateGreeting();
-    const interval = window.setInterval(updateGreeting, 60_000);
-    return () => window.clearInterval(interval);
-  }, []);
+    const greetings = [
+      `Designing in ${ws}`,
+      `Welcome back to ${ws}`,
+      `Creating magic in ${ws}`,
+      `Your ${ws} canvas awaits`,
+      `Building something great in ${ws}`,
+      `Let's get to work in ${ws}`
+    ];
+    setPrefix(greetings[Math.floor(Math.random() * greetings.length)]);
+  }, [ws]);
 
   return (
     <section className="dashboard-greeting dashboard-enter" aria-label="Dashboard greeting">
-      <h1>{prefix}, {firstName}?</h1>
+      <h1>{prefix}, {firstName}</h1>
       <div className="dashboard-greeting-actions">
         <button type="button" className="dashboard-new-bookmark-btn" onClick={onNewBookmark}>
           <span className="dashboard-new-bookmark-inner">
@@ -79,10 +73,12 @@ function GridInner({
   profileName,
   userEmail,
   showGreeting = true,
+  workspaceName,
 }: {
   profileName: string;
   userEmail: string;
   showGreeting?: boolean;
+  workspaceName?: string;
 }) {
   const {
     filtered,
@@ -129,6 +125,7 @@ function GridInner({
             userEmail={userEmail}
             onNewBookmark={openAdd}
             onImportReferences={openImport}
+            workspaceName={workspaceName}
           />
         )}
 
@@ -186,15 +183,17 @@ export function BookmarkGrid({
   userEmail,
   profileName,
   showGreeting = true,
+  workspaceName,
 }: {
   initialBookmarks: Bookmark[];
   userEmail: string;
   profileName: string;
   showGreeting?: boolean;
+  workspaceName?: string;
 }) {
   return (
     <BookmarksProvider initial={initialBookmarks}>
-      <GridInner profileName={profileName} userEmail={userEmail} showGreeting={showGreeting} />
+      <GridInner profileName={profileName} userEmail={userEmail} showGreeting={showGreeting} workspaceName={workspaceName} />
     </BookmarksProvider>
   );
 }

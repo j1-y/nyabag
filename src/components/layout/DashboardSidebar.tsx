@@ -52,8 +52,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: IconBookmark,
     match: (p) =>
       p === "/" ||
-      p.startsWith("/bookmarks") ||
-      p.startsWith("/folders"),
+      p.startsWith("/bookmarks"),
   },
   {
     href: "/canvas",

@@ -2,9 +2,10 @@
 
 import { HugeIcon } from "@/components/ui/huge-icon";
 import { IconAdd, IconArrowLeft, IconArrowRight, IconArrowUpRight, IconCamera, IconClose, IconDelete, IconInfo, IconLink, IconMaximize, IconMinus, IconRefresh, IconShare } from "@/components/ui/icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { IconSearch, IconList, IconArrowDown } from "@/components/ui/icons";
 
 export type CaptureView = {
   id: string;
@@ -427,6 +428,44 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
   const [captures, setCaptures] = useState(initialCaptures);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterSource, setFilterSource] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
+
+  const filteredCaptures = useMemo(() => {
+    let result = [...captures];
+
+    // Filter
+    if (filterSource !== "all") {
+      result = result.filter(c => {
+        if (filterSource === "extension-scroll") return c.source === "extension-scroll";
+        if (filterSource === "extension-visible") return c.source === "extension-visible";
+        if (filterSource === "extension") return c.source === "extension" || !c.source;
+        return true;
+      });
+    }
+
+    // Search
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(c => (c.page_title || "").toLowerCase().includes(q) || (c.page_url || "").toLowerCase().includes(q));
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortOrder === "newest") {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      } else if (sortOrder === "oldest") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      } else if (sortOrder === "size-desc") {
+        return (b.compressed_size || 0) - (a.compressed_size || 0);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [captures, searchQuery, filterSource, sortOrder]);
+
   const handleDelete = useCallback(
     async (id: string) => {
       const response = await fetch(`/api/captures/${id}`, { method: "DELETE" });
@@ -434,14 +473,10 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
         throw new Error("Capture delete failed");
       }
 
-      const nextLength = captures.length - 1;
       setCaptures((previous) => previous.filter((capture) => capture.id !== id));
-      setLightboxIndex((current) => {
-        if (current === null || nextLength === 0) return null;
-        return Math.min(current, nextLength - 1);
-      });
+      setLightboxIndex(null);
     },
-    [captures.length]
+    []
   );
 
   if (captures.length === 0) {
@@ -465,19 +500,63 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
     <main className="captures-page">
       <div className="captures-header">
         <div className="captures-header__left">
-          <p className="captures-kicker">Browser Extension</p>
-          <h1 className="captures-heading">Captures</h1>
+          <div className="captures-title-row">
+            <h1 className="captures-heading">Captures</h1>
+            <span className="captures-count-badge">
+              {filteredCaptures.length} {filteredCaptures.length === 1 ? "capture" : "captures"}
+            </span>
+          </div>
+          <p className="captures-subtitle">Manage and organize screenshots captured via the browser extension.</p>
         </div>
-        <span className="captures-count">
-          {captures.length} capture{captures.length !== 1 ? "s" : ""}
-        </span>
       </div>
 
-      <MasonryGrid captures={captures} onOpen={setLightboxIndex} />
+      <div className="captures-toolbar">
+        <div className="captures-toolbar__search">
+          <HugeIcon icon={IconSearch} size={16} className="captures-toolbar__search-icon" />
+          <input
+            type="text"
+            placeholder="Search captures..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        <div className="captures-toolbar__controls">
+          <div className="captures-toolbar__select-wrapper">
+            <HugeIcon icon={IconList} size={16} />
+            <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
+              <option value="all">All sources</option>
+              <option value="extension-scroll">Full-page</option>
+              <option value="extension-visible">Visible tab</option>
+              <option value="extension">Extension selection</option>
+            </select>
+          </div>
+          
+          <div className="captures-toolbar__select-wrapper">
+            <HugeIcon icon={IconArrowDown} size={16} />
+            <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="size-desc">Largest size</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-      {lightboxIndex !== null && captures[lightboxIndex] && (
+      {filteredCaptures.length > 0 ? (
+        <MasonryGrid captures={filteredCaptures} onOpen={setLightboxIndex} />
+      ) : (
+        <div className="captures-empty captures-empty--filtered">
+          <p>No captures match your filters.</p>
+          <button type="button" onClick={() => { setSearchQuery(""); setFilterSource("all"); }} className="captures-empty__link">
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {lightboxIndex !== null && filteredCaptures[lightboxIndex] && (
         <Lightbox
-          captures={captures}
+          captures={filteredCaptures}
           index={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}

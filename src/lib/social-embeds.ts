@@ -1,13 +1,7 @@
 export type SocialProvider = "x" | "facebook" | "linkedin" | "instagram" | "tiktok" | "pinterest";
 export const SOCIAL_NOTE_PREFIX = "nyabag-social:";
 
-export type SocialEmbed =
-  | { provider: "x"; url: string; statusId: string }
-  | { provider: "facebook"; url: string; iframeSrc: string }
-  | { provider: "linkedin"; url: string; iframeSrc: string | null }
-  | { provider: "instagram"; url: string }
-  | { provider: "tiktok"; url: string; videoId: string | null }
-  | { provider: "pinterest"; url: string; widget: "pin" | "board" | "profile" };
+export type SocialEmbed = { provider: SocialProvider; url: string };
 
 export type SocialEmbedSize = {
   width: number;
@@ -16,11 +10,11 @@ export type SocialEmbedSize = {
 
 export const SOCIAL_EMBED_SIZE: Record<SocialProvider, SocialEmbedSize> = {
   x: { width: 550, height: 640 },
-  facebook: { width: 500, height: 650 },
-  linkedin: { width: 504, height: 780 },
+  facebook: { width: 550, height: 650 },
+  linkedin: { width: 550, height: 780 },
   instagram: { width: 540, height: 720 },
-  tiktok: { width: 605, height: 760 },
-  pinterest: { width: 420, height: 660 },
+  tiktok: { width: 325, height: 580 },
+  pinterest: { width: 345, height: 660 },
 };
 
 function normalizedUrl(raw: string): URL | null {
@@ -54,85 +48,27 @@ export function parseSocialEmbed(raw: string): SocialEmbed | null {
   const href = url.toString();
 
   if (hostname === "x.com" || hostname === "twitter.com" || hostname === "mobile.twitter.com") {
-    const statusId = url.pathname.match(/\/status(?:es)?\/(\d+)/)?.[1];
-    if (!statusId) return null;
-    return {
-      provider: "x",
-      url: href.replace("https://x.com/", "https://twitter.com/").replace("https://mobile.twitter.com/", "https://twitter.com/"),
-      statusId,
-    };
+    return { provider: "x", url: href.replace("https://x.com/", "https://twitter.com/").replace("https://mobile.twitter.com/", "https://twitter.com/") };
   }
 
   if (hostname === "facebook.com" || hostname.endsWith(".facebook.com") || hostname === "fb.watch") {
-    const path = url.pathname.toLowerCase();
-    const isPost =
-      path.includes("/posts/") ||
-      path.includes("/share/") ||
-      path.includes("/permalink.php") ||
-      path.includes("/photo.php") ||
-      path.includes("/videos/") ||
-      path.includes("/watch/") ||
-      path.includes("/reel/") ||
-      path.includes("/story.php") ||
-      url.searchParams.has("story_fbid");
-    if (!isPost) return null;
-
-    const plugin = new URL("https://www.facebook.com/plugins/post.php");
-    plugin.searchParams.set("href", href);
-    plugin.searchParams.set("show_text", "true");
-    plugin.searchParams.set("width", "500");
-    return { provider: "facebook", url: href, iframeSrc: plugin.toString() };
+    return { provider: "facebook", url: href };
   }
 
   if (hostname === "linkedin.com" || hostname.endsWith(".linkedin.com")) {
-    const path = url.pathname.toLowerCase();
-    const activityId = url.pathname.match(/activity-(\d+)/)?.[1];
-    const isPost = path.startsWith("/posts/") || path.includes("/feed/update/");
-    if (!isPost) return null;
-
-    const decodedHref = decodeURIComponent(href);
-    const urnMatch = decodedHref.match(/urn:li:(activity|share|ugcPost):([A-Za-z0-9_-]+)/i);
-    const iframeSrc = urnMatch
-      ? `https://www.linkedin.com/embed/feed/update/urn:li:${urnMatch[1]}:${urnMatch[2]}`
-      : activityId
-        ? `https://www.linkedin.com/embed/feed/update/urn:li:activity:${activityId}`
-        : null;
-
-    return { provider: "linkedin", url: href, iframeSrc };
+    return { provider: "linkedin", url: href };
   }
 
   if (hostname === "instagram.com" || hostname.endsWith(".instagram.com")) {
-    const path = url.pathname.toLowerCase();
-    const isPost =
-      path.startsWith("/p/") ||
-      path.startsWith("/reel/") ||
-      path.startsWith("/tv/");
-    if (!isPost) return null;
-
     return { provider: "instagram", url: href };
   }
 
   if (hostname === "tiktok.com" || hostname.endsWith(".tiktok.com")) {
-    const videoId = url.pathname.match(/\/video\/(\d+)/)?.[1] ?? null;
-    const isVideo = Boolean(videoId);
-    if (!isVideo) return null;
-
-    return { provider: "tiktok", url: href, videoId };
+    return { provider: "tiktok", url: href };
   }
 
   if (hostname === "pinterest.com" || hostname.endsWith(".pinterest.com") || hostname === "pin.it") {
-    const path = url.pathname.toLowerCase();
-    if (hostname === "pin.it" || path.startsWith("/pin/")) {
-      return { provider: "pinterest", url: href, widget: "pin" };
-    }
-
-    const parts = path.split("/").filter(Boolean);
-    if (parts.length >= 2) {
-      return { provider: "pinterest", url: href, widget: "board" };
-    }
-    if (parts.length === 1) {
-      return { provider: "pinterest", url: href, widget: "profile" };
-    }
+    return { provider: "pinterest", url: href };
   }
 
   return null;

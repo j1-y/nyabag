@@ -69,8 +69,7 @@ interface NotesCtx {
   setPendingMediaNote: (media: PendingMediaNote | null) => void;
   isCreatingMediaNote: boolean;
   mediaPlacementError: string;
-  viewport: CanvasViewport;
-  setViewport: (v: CanvasViewport) => void;
+
   selectedId: string | null;
   setSelectedId: (id: string | null) => void;
   selectedIds: string[];
@@ -138,57 +137,32 @@ export function NotesProvider({
   const [pendingMediaNote, setPendingMediaNoteState] = useState<PendingMediaNote | null>(null);
   const [isCreatingMediaNote, setIsCreatingMediaNote] = useState(false);
   const [mediaPlacementError, setMediaPlacementError] = useState("");
-  const [viewport, setViewport] = useState<CanvasViewport>({ x: 0, y: 0, scale: 1 });
-  const [selectedIds, setSelectedIdsState] = useState<string[]>([]);
-  const colorIndexRef = useRef(0);
-  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
   const initializeCanvasStore = useCanvasStore((state) => state.initialize);
-  const setStoreViewport = useCanvasStore((state) => state.setViewport);
 
   useEffect(() => {
     initializeCanvasStore(initial, initialSections);
   }, [initial, initialSections, initializeCanvasStore]);
 
   useEffect(() => {
-    let frame: number | null = null;
-
     try {
       const stored = window.localStorage.getItem("nyabag:canvas-viewport");
-      if (!stored) return undefined;
+      if (!stored) return;
       const parsed = JSON.parse(stored) as Partial<CanvasViewport>;
       if (
         typeof parsed.x === "number" &&
         typeof parsed.y === "number" &&
         typeof parsed.scale === "number"
       ) {
-        const restoredViewport = parsed as CanvasViewport;
-        frame = window.requestAnimationFrame(() => {
-          setViewport(restoredViewport);
-          setStoreViewport(restoredViewport);
-        });
+        useCanvasStore.getState().setViewport(parsed as CanvasViewport);
       }
     } catch {
-      // Canvas viewport is a non-sensitive UI preference; ignore corrupt storage.
+      // ignore
     }
+  }, []);
 
-    return () => {
-      if (frame !== null) window.cancelAnimationFrame(frame);
-    };
-  }, [setStoreViewport]);
-
-  useEffect(() => {
-    setStoreViewport(viewport);
-  }, [setStoreViewport, viewport]);
-
-  const setPersistentViewport = useCallback((nextViewport: CanvasViewport) => {
-    setViewport(nextViewport);
-    setStoreViewport(nextViewport);
-    try {
-      window.localStorage.setItem("nyabag:canvas-viewport", JSON.stringify(nextViewport));
-    } catch {
-      // Do not persist private canvas content; viewport only is safe to drop.
-    }
-  }, [setStoreViewport]);
+  const [selectedIds, setSelectedIdsState] = useState<string[]>([]);
+  const colorIndexRef = useRef(0);
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null;
 
   const setSelectedIds = useCallback((ids: string[]) => {
     setSelectedIdsState([...new Set(ids)]);
@@ -342,8 +316,9 @@ export function NotesProvider({
     async (url: string): Promise<ActionResult<CanvasNote>> => {
       const color = NOTE_COLORS[colorIndexRef.current % NOTE_COLORS.length];
       colorIndexRef.current++;
-      const centerX = (window.innerWidth / 2 - viewport.x) / viewport.scale;
-      const centerY = (window.innerHeight / 2 - viewport.y) / viewport.scale;
+      const { x, y, scale } = useCanvasStore.getState().viewport;
+      const centerX = (window.innerWidth / 2 - x) / scale;
+      const centerY = (window.innerHeight / 2 - y) / scale;
       const result = await createSocialNoteFromUrl(url, centerX, centerY, color);
 
       if (result.success) {
@@ -356,7 +331,7 @@ export function NotesProvider({
 
       return result;
     },
-    [setSelectedId, viewport.scale, viewport.x, viewport.y]
+    [setSelectedId]
   );
 
   const applyServerSnapshot = useCallback((snapshot: { notes: CanvasNote[]; sections: CanvasSection[] }) => {
@@ -746,8 +721,7 @@ export function NotesProvider({
       setPendingMediaNote,
       isCreatingMediaNote,
       mediaPlacementError,
-      viewport,
-      setViewport: setPersistentViewport,
+
       selectedId,
       setSelectedId,
       selectedIds,
@@ -786,8 +760,7 @@ export function NotesProvider({
       setPendingMediaNote,
       isCreatingMediaNote,
       mediaPlacementError,
-      viewport,
-      setPersistentViewport,
+
       selectedId,
       selectedIds,
       setSelectedId,

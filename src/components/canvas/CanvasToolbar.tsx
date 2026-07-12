@@ -12,9 +12,7 @@ import { SocialNoteDialog } from "./SocialNoteDialog";
 const NOTE_TYPES: { type: NoteType; icon: IconSvgElement; label: string; size: number }[] = [
   { type: "text", icon: IconSticker, label: "Sticky note", size: 18 },
   { type: "text_frame", icon: IconText, label: "Text frame", size: 18 },
-  { type: "link", icon: IconLink, label: "Link note", size: 18 },
   { type: "image", icon: IconImage, label: "Image note", size: 18 },
-  { type: "video", icon: IconVideo, label: "Video note", size: 18 },
   { type: "social", icon: IconShare, label: "Social post", size: 18 },
 ];
 
@@ -39,7 +37,7 @@ export function CanvasToolbar() {
             type="button"
             variant="ghost"
             size="icon"
-            className={`canvas-tool-switch-btn${toolMode === "select" ? " active" : ""}`}
+            className={`canvas-tool-switch-btn [&_svg]:size-[18px]${toolMode === "select" ? " active" : ""}`}
             title="Select notes"
             aria-label="Select notes"
             aria-pressed={toolMode === "select"}
@@ -49,13 +47,13 @@ export function CanvasToolbar() {
               setPendingMediaNote(null);
             }}
           >
-            <HugeIcon icon={IconCursorPointer} size={18} style={{ width: 18, height: 18 }} />
+            <HugeIcon icon={IconCursorPointer} size={18} strokeWidth={1.5} />
           </IconButton>
           <IconButton
             type="button"
             variant="ghost"
             size="icon"
-            className={`canvas-tool-switch-btn${toolMode === "pan" ? " active" : ""}`}
+            className={`canvas-tool-switch-btn [&_svg]:size-[18px]${toolMode === "pan" ? " active" : ""}`}
             title="Drag canvas"
             aria-label="Drag canvas"
             aria-pressed={toolMode === "pan"}
@@ -65,7 +63,7 @@ export function CanvasToolbar() {
               setPendingMediaNote(null);
             }}
           >
-            <HugeIcon icon={IconHand} size={18} style={{ width: 18, height: 18 }} />
+            <HugeIcon icon={IconHand} size={18} strokeWidth={1.5} />
           </IconButton>
         </div>
 
@@ -81,7 +79,7 @@ export function CanvasToolbar() {
               type="button"
               variant="ghost"
               size="icon"
-              className={`canvas-toolbar-btn${isActive ? " active" : ""}`}
+              className={`canvas-toolbar-btn [&_svg]:size-[18px]${isActive ? " active" : ""}`}
               title={label}
               aria-label={label}
               aria-pressed={isActive}
@@ -107,7 +105,7 @@ export function CanvasToolbar() {
                 setToolMode("select");
               }}
             >
-              <HugeIcon icon={Icon} size={size} />
+              <HugeIcon icon={Icon} size={size} strokeWidth={1.5} />
             </IconButton>
           );
         })}

@@ -9,11 +9,11 @@ type HugeIconProps = Omit<HugeiconsIconProps, "size"> & {
 };
 
 function normalizeIconSize(size: number | string | undefined) {
-  if (typeof size === "number") return Math.max(size, 18);
+  if (typeof size === "number") return size;
 
   if (typeof size === "string") {
     const parsed = Number(size);
-    if (Number.isFinite(parsed)) return String(Math.max(parsed, 18));
+    if (Number.isFinite(parsed)) return String(parsed);
   }
 
   return size ?? 18;
