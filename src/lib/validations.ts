@@ -66,6 +66,25 @@ export type FolderCreateInput = z.infer<typeof folderCreateSchema>;
 export type FolderUpdateInput = z.infer<typeof folderUpdateSchema>;
 export type MoveBookmarkToFolderInput = z.infer<typeof moveBookmarkToFolderSchema>;
 
+export const workspaceSwitchSchema = z.object({
+  workspaceId: z.string().uuid("Workspace not found"),
+});
+
+export const workspaceCreateSchema = z.object({
+  name: z.string().trim().min(1, "Workspace name is required").max(80, "Name must be 80 characters or less"),
+  description: z.string().trim().max(500, "Description must be 500 characters or less").optional().default(""),
+});
+
+export const workspaceUpdateSchema = z.object({
+  id: z.string().uuid("Workspace not found"),
+  name: z.string().trim().min(1, "Workspace name is required").max(80, "Name must be 80 characters or less"),
+  description: z.string().trim().max(500, "Description must be 500 characters or less").optional().default(""),
+});
+
+export type WorkspaceSwitchInput = z.infer<typeof workspaceSwitchSchema>;
+export type WorkspaceCreateInput = z.infer<typeof workspaceCreateSchema>;
+export type WorkspaceUpdateInput = z.infer<typeof workspaceUpdateSchema>;
+
 export const profileUpdateSchema = z.object({
   name: z.string().trim().max(120, "Name must be 120 characters or less").optional(),
   email: z

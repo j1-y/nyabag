@@ -99,3 +99,7 @@
 ## Decision: Extension auth preserves the original start URL through login and signup
 
 - Reason: When a user is not already authenticated, the extension auth start route must send them through the normal Nyabag login/signup screens without losing the original `/api/extension/auth/start?...` request, otherwise the web-session handoff can never complete after auth.
+
+## Decision: Workspace id is the content boundary
+
+- Reason: V1 workspaces are same-user personal containers, so existing `user_id` columns remain creator/owner metadata while `workspace_id` scopes bookmarks, folders, canvas notes and sections, captures, onboarding state, Cortex records, and Oracle jobs. Membership remains owner-only in the UI for now, with team, invite, delete, billing, sharing, and collaboration semantics deferred.

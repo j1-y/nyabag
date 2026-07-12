@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserProfile } from "@/lib/profile";
 import { getUserOnboarding, hasCompletedOnboarding } from "@/lib/onboarding";
 import { DashboardShell } from "@/components/layout/DashboardShell";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { BookmarkFolder } from "@/lib/types";
 
 export default async function DashboardLayout({
@@ -53,12 +54,15 @@ export default async function DashboardLayout({
   const onboarding = await getUserOnboarding(supabase, user);
   if (!hasCompletedOnboarding(onboarding)) redirect("/onboarding");
 
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+
   const [profile, foldersResult] = await Promise.all([
     getUserProfile(supabase, user),
     supabase
       .from("bookmark_folders")
       .select("*")
       .eq("user_id", user.id)
+      .eq("workspace_id", workspaceContext.activeWorkspace.id)
       .order("sort_order", { ascending: true })
       .order("name", { ascending: true }),
   ]);
@@ -71,6 +75,9 @@ export default async function DashboardLayout({
       profileName={profile.name}
       profileAvatarUrl={profile.avatar_url ?? null}
       folders={folders}
+      workspaces={workspaceContext.workspaces}
+      activeWorkspace={workspaceContext.activeWorkspace}
+      activeWorkspaceRole={workspaceContext.activeWorkspaceRole}
     >
       {children}
     </DashboardShell>

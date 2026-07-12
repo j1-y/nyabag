@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createAdminServiceClient } from "@/lib/admin/service";
 import { authenticateExtensionUser } from "@/lib/extension/auth";
 import { extensionCors, handleExtensionPreflight } from "@/lib/extension/cors";
 
@@ -20,7 +21,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // MVP: return Inbox only. Replace with real Bags/Collections once the DB table exists.
+  const service = createAdminServiceClient();
+  const { data: memberships } = await service
+    .from("workspace_members")
+    .select("role,workspaces(*)")
+    .eq("user_id", auth.user.id);
+
+  const workspaces = (memberships ?? [])
+    .map((membership) => {
+      const workspace = Array.isArray(membership.workspaces)
+        ? membership.workspaces[0]
+        : membership.workspaces;
+      if (!workspace) return null;
+      return {
+        id: workspace.id,
+        name: workspace.name,
+        role: membership.role,
+      };
+    })
+    .filter(Boolean);
+
   return extensionCors(
     NextResponse.json({
       collections: [
@@ -31,6 +51,7 @@ export async function GET(request: NextRequest) {
           color: "#f5f0df",
         },
       ],
+      workspaces,
     }),
     origin
   );

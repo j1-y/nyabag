@@ -1,9 +1,17 @@
 # Feature Registry
 
+## Workspaces
+
+- Feature: First-party personal workspaces
+- Description: Authenticated users can create, switch, and rename owner-scoped workspaces. The active workspace is resolved server-side from `nyabag-active-workspace-id` with membership validation, newest-membership fallback, and automatic `Personal` creation. V1 has no delete, invites, billing, sharing, or collaboration UI.
+- Key Files: `src/lib/workspaces.ts`, `src/lib/workspace-actions.ts`, `src/components/workspaces/*`, `src/app/(dashboard)/layout.tsx`, `src/components/layout/DashboardSidebar.tsx`, `supabase/schema.sql`
+- Dependencies: Supabase auth, `workspaces`, `workspace_members`, workspace-scoped content tables, dashboard shell
+- Status: Active
+
 ## Bookmarks
 
 - Feature: Bookmark dashboard
-- Description: Main saved-inspiration workspace with cards, filtering, pending creation, deferred Cortex ingest for ready screenshots, best-effort Cortex cleanup on delete, Cortex-backed active search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade.
+- Description: Main saved-inspiration surface with cards, filtering, pending creation, deferred Cortex ingest for ready screenshots, best-effort Cortex cleanup on delete, Cortex-backed active search, detail views, sidebar-only app navigation, and a fixed bottom search dock over a non-interactive main-content fade. Bookmark create, import, update, delete, list, detail, folder, inbox, processing, and search paths are scoped to the active workspace.
 - Key Files: `src/app/(dashboard)/page.tsx`, `src/components/bookmarks/*`, `src/hooks/useBookmarks.tsx`, `src/lib/actions.ts`, `src/lib/cortex.ts`, `src/lib/cortex-actions.ts`, `src/lib/bookmarks/*`, `src/lib/data.ts`, `src/lib/metadata.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, bookmark tables, hosted Cortex, Oracle screenshot/metadata processing, normal onboarding screenshot plus long app screenshot enrichment; no app-side Gemini bookmark enrichment
 - Status: Active
@@ -11,7 +19,7 @@
 ## Bookmark Search
 
 - Feature: Cortex bookmark search
-- Description: Ready bookmarks with screenshots are ingested to hosted Cortex, and active bookmark search calls internal-token-authenticated, user-scoped Cortex search, owner-filters returned `nyabagBookmarkId` values through Supabase, and returns evidence-gated cards in Cortex order. Empty search remains the local bookmark list with tag/recent filters.
+- Description: Ready bookmarks with screenshots are ingested to hosted Cortex with workspace context when available, and active bookmark search calls internal-token-authenticated Cortex search, filters returned `nyabagBookmarkId` values through active-workspace Supabase queries, and returns evidence-gated cards in Cortex order. Empty search remains the workspace-local bookmark list with tag/recent filters.
 - Key Files: `src/lib/cortex.ts`, `src/lib/cortex-actions.ts`, `src/lib/actions.ts`, `src/hooks/useBookmarks.tsx`, `src/components/bookmarks/BookmarkSearchBar.tsx`, `src/components/bookmarks/BookmarkGrid.tsx`, `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`, `supabase/schema.sql`
 - Dependencies: Supabase RLS, server-only `CORTEX_API_URL`, server-only `CORTEX_INTERNAL_API_KEY`, `bookmarks.cortex_status`, Cortex `/ingest`, `/search`, and delete cleanup
 - Status: Active
@@ -19,7 +27,7 @@
 ## Canvas
 
 - Feature: Infinite canvas
-- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, drag-resize interactions, and sidebar-only app navigation.
+- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, drag-resize interactions, and sidebar-only app navigation. Canvas notes, sections, uploads, section wrapping, and note membership updates are scoped to the active workspace.
 - Key Files: `src/app/(dashboard)/canvas/page.tsx`, `src/components/canvas/*`, `src/hooks/useNotes.tsx`, `src/lib/canvas-actions.ts`, `src/lib/canvas-data.ts`, `src/lib/social-embeds.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, storage, signed URLs, route-level loading UI
 - Status: Active
@@ -27,7 +35,7 @@
 ## Mobile Capture
 
 - Feature: Mobile URL capture
-- Description: Constrained mobile experience that lets authenticated users submit URLs without opening the full desktop workspace.
+- Description: Constrained mobile experience that lets authenticated users submit URLs into the active workspace without opening the full desktop workspace.
 - Key Files: `src/components/layout/MobileBookmarkCapture.tsx`, `src/components/layout/DashboardShell.tsx`, `src/app/(dashboard)/layout.tsx`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, bookmark creation pipeline
 - Status: Active
@@ -43,7 +51,7 @@
 ## Folders
 
 - Feature: Folder hierarchy
-- Description: Nested bookmark organization with inbox, breadcrumbs, move, rename, and delete flows.
+- Description: Nested bookmark organization with inbox, breadcrumbs, move, rename, and delete flows. Folder tree loading, duplicate checks, parent validation, folder pages, reparenting, and bookmark moves are active-workspace scoped and cannot cross workspaces.
 - Key Files: `src/app/(dashboard)/folders/[folderId]/page.tsx`, `src/components/folders/*`, `src/lib/folder-actions.ts`, `src/lib/folders.ts`, `supabase/schema.sql`
 - Dependencies: Bookmark tables, folder tables, Supabase auth
 - Status: Active
@@ -59,7 +67,7 @@
 ## Onboarding
 
 - Feature: First-memory onboarding
-- Description: Prototype-faithful first-run flow that demonstrates Nyabag by asking users to save one real bookmark through the normal bookmark pipeline, animating idle/website-skeleton creating/success states, polling real preview status, waiting for the normal top-viewport `screenshot_url` before success, and offering retry/skip/open actions into the dashboard.
+- Description: Prototype-faithful first-run flow that demonstrates Nyabag by asking users to save one real bookmark into the active/default workspace through the normal bookmark pipeline, animating idle/website-skeleton creating/success states, polling real preview status, waiting for the normal top-viewport `screenshot_url` before success, and offering retry/skip/open actions into the dashboard.
 - Key Files: `src/app/onboarding/page.tsx`, `src/components/onboarding/*`, `src/lib/onboarding.ts`, `src/lib/onboarding-actions.ts`, `src/lib/actions.ts`
 - Dependencies: Supabase auth, onboarding table/state, bookmark creation pipeline, bookmark preview processing status, retry bookmark processing action, favicon route
 - Status: Active
@@ -83,7 +91,7 @@
 ## Extension
 
 - Feature: Browser extension API
-- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, collection lookup, unified bookmark/screenshot capture through `/captures`, upload, and commit flows. Sessions are API-origin-bound and validated through `/me`, and bearer-auth failures expose stable safe diagnostic codes.
+- Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, workspace/collection lookup, unified bookmark/screenshot capture through `/captures`, upload, and commit flows. Capture endpoints may accept optional `workspaceId`, validate membership server-side, and fall back safely to the user's default workspace. Sessions are API-origin-bound and validated through `/me`, and bearer-auth failures expose stable safe diagnostic codes.
 - Key Files: `src/app/api/extension/*`, `src/lib/extension/*`, `supabase/schema.sql`
 - Dependencies: Supabase auth, service-role-only one-time auth code storage, `NYABAG_CHROME_EXTENSION_IDS`, CORS rules, capture storage, extension client state
 - Status: Active
@@ -91,7 +99,7 @@
 ## Captures
 
 - Feature: Screenshot captures gallery and lightbox
-- Description: Masonry screenshot gallery with a body-portaled full-viewport lightbox, fit-to-screen display, zoom and drag panning, keyboard navigation, metadata, source actions, and deletion.
+- Description: Masonry screenshot gallery with a body-portaled full-viewport lightbox, fit-to-screen display, zoom and drag panning, keyboard navigation, metadata, source actions, and deletion. Capture rows are stored with `workspace_id`; storage paths remain user-based.
 - Key Files: `src/components/captures/CapturesPageClient.tsx`, `src/app/(dashboard)/captures/page.tsx`, `src/app/globals.css`, `src/app/api/captures/[id]/route.ts`
 - Dependencies: Authenticated dashboard shell, `captures` table, private capture storage signed URLs
 - Status: Active

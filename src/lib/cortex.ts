@@ -3,6 +3,7 @@ import "server-only";
 export type CortexBookmarkIngestPayload = {
   nyabagBookmarkId: string;
   userId: string;
+  workspaceId?: string | null;
   url: string;
   title?: string | null;
   summary?: string | null;
@@ -17,6 +18,7 @@ export type CortexBookmarkIngestResponse = {
 export type CortexBookmarkDeletePayload = {
   nyabagBookmarkId: string;
   userId: string;
+  workspaceId?: string | null;
   memoryId?: string | null;
 };
 
@@ -29,6 +31,7 @@ export type CortexSearchResult = {
   memoryId?: string;
   nyabagBookmarkId?: string;
   userId?: string;
+  workspaceId?: string;
   title?: string;
   url?: string;
   similarity?: number;
@@ -46,6 +49,7 @@ export type CortexSearchResponse = {
 export type CortexSearchParams = {
   query: string;
   userId: string;
+  workspaceId?: string | null;
   limit?: number;
 };
 
@@ -104,6 +108,7 @@ export async function ingestBookmarkToCortex(
       body: JSON.stringify({
         nyabagBookmarkId: payload.nyabagBookmarkId,
         userId: payload.userId,
+        workspaceId: payload.workspaceId ?? null,
         url: payload.url,
         title: payload.title ?? null,
         summary: payload.summary ?? null,
@@ -144,6 +149,7 @@ export async function deleteBookmarkFromCortex(
   if (!bookmarkId || !userId) return null;
 
   const params = new URLSearchParams({ userId });
+  if (payload.workspaceId) params.set("workspaceId", payload.workspaceId);
 
   try {
     const response = await fetch(`${apiUrl}/memories/bookmark/${encodeURIComponent(bookmarkId)}?${params.toString()}`, {
@@ -179,6 +185,7 @@ export async function deleteBookmarkFromCortex(
 export async function searchCortex({
   query,
   userId,
+  workspaceId,
   limit = 20,
 }: CortexSearchParams): Promise<CortexSearchResponse | null> {
   const apiUrl = getCortexApiUrl();
@@ -200,12 +207,14 @@ export async function searchCortex({
     limit: String(limit),
     userId: scopedUserId,
   });
+  if (workspaceId?.trim()) params.set("workspaceId", workspaceId.trim());
 
   try {
     const response = await fetch(`${apiUrl}/search?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${internalApiKey}`,
         "X-Nyabag-User-Id": scopedUserId,
+        ...(workspaceId?.trim() ? { "X-Nyabag-Workspace-Id": workspaceId.trim() } : {}),
       },
       cache: "no-store",
     });

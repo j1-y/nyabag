@@ -14,6 +14,7 @@ import {
   getFolderDescendantIds,
   isDescendantFolder,
 } from "@/lib/folders";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { ActionResult, Bookmark, BookmarkFolder } from "@/lib/types";
 
 const MAX_FOLDER_DEPTH = 4;
@@ -25,14 +26,20 @@ async function getAuthUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  return { supabase, user };
+  const workspaceContext = user ? await getWorkspaceContext(supabase, user) : null;
+  return { supabase, user, workspaceId: workspaceContext?.activeWorkspace.id ?? null };
 }
 
-async function getAllUserFoldersRaw(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<BookmarkFolder[]> {
+async function getAllUserFoldersRaw(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  workspaceId: string
+): Promise<BookmarkFolder[]> {
   const { data } = await supabase
     .from("bookmark_folders")
     .select("*")
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
   return (data ?? []) as BookmarkFolder[];
@@ -41,12 +48,14 @@ async function getAllUserFoldersRaw(supabase: Awaited<ReturnType<typeof createCl
 async function getMaxSiblingSortOrder(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
+  workspaceId: string,
   parentId: string | null | undefined
 ): Promise<number> {
   const query = supabase
     .from("bookmark_folders")
     .select("sort_order")
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("sort_order", { ascending: false })
     .limit(1);
 
@@ -63,6 +72,7 @@ async function getMaxSiblingSortOrder(
 async function checkDuplicateSiblingName(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
+  workspaceId: string,
   name: string,
   parentId: string | null | undefined,
   excludeId?: string
@@ -71,6 +81,7 @@ async function checkDuplicateSiblingName(
     .from("bookmark_folders")
     .select("id")
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .ilike("name", name.trim());
 
   if (parentId) {
@@ -90,22 +101,23 @@ async function checkDuplicateSiblingName(
 // ── Fetch actions ─────────────────────────────────────────────
 
 export async function getBookmarkFolders(): Promise<ActionResult<BookmarkFolder[]>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
-  const folders = await getAllUserFoldersRaw(supabase, user.id);
+  const folders = await getAllUserFoldersRaw(supabase, user.id, workspaceId);
   return { success: true, data: folders };
 }
 
 export async function getFolderById(folderId: string): Promise<ActionResult<BookmarkFolder>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const { data, error } = await supabase
     .from("bookmark_folders")
     .select("*")
     .eq("id", folderId)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .maybeSingle();
 
   if (error) return { success: false, error: error.message };
@@ -115,13 +127,14 @@ export async function getFolderById(folderId: string): Promise<ActionResult<Book
 }
 
 export async function getBookmarksByFolder(folderId: string): Promise<ActionResult<Bookmark[]>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .eq("folder_id", folderId)
     .order("created_at", { ascending: false });
 
@@ -130,13 +143,14 @@ export async function getBookmarksByFolder(folderId: string): Promise<ActionResu
 }
 
 export async function getInboxBookmarks(): Promise<ActionResult<Bookmark[]>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .is("folder_id", null)
     .order("created_at", { ascending: false });
 
@@ -149,8 +163,8 @@ export async function getInboxBookmarks(): Promise<ActionResult<Bookmark[]>> {
 export async function createBookmarkFolder(
   input: FolderCreateInput
 ): Promise<ActionResult<BookmarkFolder>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const parsed = folderCreateSchema.safeParse(input);
   if (!parsed.success) {
@@ -160,7 +174,7 @@ export async function createBookmarkFolder(
   const { name, parent_id, description, color, icon } = parsed.data;
 
   // Load all user folders for depth/cycle checks
-  const allFolders = await getAllUserFoldersRaw(supabase, user.id);
+  const allFolders = await getAllUserFoldersRaw(supabase, user.id, workspaceId);
 
   // Validate parent ownership and depth
   if (parent_id) {
@@ -179,7 +193,7 @@ export async function createBookmarkFolder(
   }
 
   // Check for duplicate sibling name
-  const isDuplicate = await checkDuplicateSiblingName(supabase, user.id, name, parent_id);
+  const isDuplicate = await checkDuplicateSiblingName(supabase, user.id, workspaceId, name, parent_id);
   if (isDuplicate) {
     return {
       success: false,
@@ -187,12 +201,13 @@ export async function createBookmarkFolder(
     };
   }
 
-  const sortOrder = await getMaxSiblingSortOrder(supabase, user.id, parent_id);
+  const sortOrder = await getMaxSiblingSortOrder(supabase, user.id, workspaceId, parent_id);
 
   const { data, error } = await supabase
     .from("bookmark_folders")
     .insert({
       user_id: user.id,
+      workspace_id: workspaceId,
       parent_id: parent_id ?? null,
       name: name.trim(),
       description: description ?? "",
@@ -216,8 +231,8 @@ export async function createBookmarkFolder(
 export async function updateBookmarkFolder(
   input: FolderUpdateInput
 ): Promise<ActionResult<BookmarkFolder>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const parsed = folderUpdateSchema.safeParse(input);
   if (!parsed.success) {
@@ -227,7 +242,7 @@ export async function updateBookmarkFolder(
   const { id, name, parent_id, description, color, icon, sort_order } = parsed.data;
 
   // Load all user folders for all checks
-  const allFolders = await getAllUserFoldersRaw(supabase, user.id);
+  const allFolders = await getAllUserFoldersRaw(supabase, user.id, workspaceId);
   const targetFolder = allFolders.find((f) => f.id === id);
   if (!targetFolder) return { success: false, error: "Folder not found or not owned by you" };
 
@@ -266,6 +281,7 @@ export async function updateBookmarkFolder(
   const isDuplicate = await checkDuplicateSiblingName(
     supabase,
     user.id,
+    workspaceId,
     effectiveName,
     effectiveParentId,
     id
@@ -290,6 +306,7 @@ export async function updateBookmarkFolder(
     .update(updatePayload)
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .select()
     .single();
 
@@ -306,10 +323,10 @@ export async function updateBookmarkFolder(
 // ── Delete ────────────────────────────────────────────────────
 
 export async function deleteBookmarkFolder(folderId: string): Promise<ActionResult> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
-  const allFolders = await getAllUserFoldersRaw(supabase, user.id);
+  const allFolders = await getAllUserFoldersRaw(supabase, user.id, workspaceId);
   const targetFolder = allFolders.find((f) => f.id === folderId);
   if (!targetFolder) return { success: false, error: "Folder not found or not owned by you" };
 
@@ -324,6 +341,7 @@ export async function deleteBookmarkFolder(folderId: string): Promise<ActionResu
     .from("bookmarks")
     .update({ folder_id: null })
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .in("folder_id", allFolderIds);
 
   if (nullifyError) return { success: false, error: nullifyError.message };
@@ -333,7 +351,8 @@ export async function deleteBookmarkFolder(folderId: string): Promise<ActionResu
     .from("bookmark_folders")
     .delete()
     .eq("id", folderId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId);
 
   if (deleteError) return { success: false, error: deleteError.message };
 
@@ -350,8 +369,8 @@ export async function moveBookmarkToFolder(
   bookmarkId: string,
   folderId: string | null
 ): Promise<ActionResult<Bookmark>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   const parsed = moveBookmarkToFolderSchema.safeParse({ bookmark_id: bookmarkId, folder_id: folderId });
   if (!parsed.success) {
@@ -361,9 +380,10 @@ export async function moveBookmarkToFolder(
   // Verify bookmark ownership
   const { data: bookmark, error: bookmarkError } = await supabase
     .from("bookmarks")
-    .select("id, folder_id")
+    .select("id, folder_id, workspace_id")
     .eq("id", bookmarkId)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .maybeSingle();
 
   if (bookmarkError) return { success: false, error: bookmarkError.message };
@@ -376,6 +396,7 @@ export async function moveBookmarkToFolder(
       .select("id")
       .eq("id", folderId)
       .eq("user_id", user.id)
+      .eq("workspace_id", workspaceId)
       .maybeSingle();
 
     if (!folder) return { success: false, error: "Folder not found or not owned by you" };
@@ -386,6 +407,7 @@ export async function moveBookmarkToFolder(
     .update({ folder_id: folderId })
     .eq("id", bookmarkId)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .select()
     .single();
 
@@ -404,8 +426,8 @@ export async function bulkMoveBookmarksToFolder(
   bookmarkIds: string[],
   folderId: string | null
 ): Promise<ActionResult<{ count: number }>> {
-  const { supabase, user } = await getAuthUser();
-  if (!user) return { success: false, error: "Not authenticated" };
+  const { supabase, user, workspaceId } = await getAuthUser();
+  if (!user || !workspaceId) return { success: false, error: "Not authenticated" };
 
   if (bookmarkIds.length === 0) return { success: true, data: { count: 0 } };
 
@@ -416,6 +438,7 @@ export async function bulkMoveBookmarksToFolder(
       .select("id")
       .eq("id", folderId)
       .eq("user_id", user.id)
+      .eq("workspace_id", workspaceId)
       .maybeSingle();
 
     if (!folder) return { success: false, error: "Folder not found or not owned by you" };
@@ -425,6 +448,7 @@ export async function bulkMoveBookmarksToFolder(
     .from("bookmarks")
     .update({ folder_id: folderId })
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceId)
     .in("id", bookmarkIds);
 
   if (error) return { success: false, error: error.message };

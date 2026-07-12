@@ -9,6 +9,7 @@ import { getDomain } from "@/lib/data";
 import { removeBookmarkScreenshot } from "@/lib/bookmarks/storage";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
 import { deleteBookmarkFromCortex, isCortexConfigured, searchCortex, type CortexSearchResult } from "@/lib/cortex";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import { timeAsync } from "@/lib/perf";
 import { PROFILE_AVATAR_BUCKET } from "@/lib/profile";
 import { getTelegramBotUrl, isTelegramConfigured } from "@/lib/telegram/config";
@@ -32,6 +33,7 @@ type Supabase = Awaited<ReturnType<typeof createClient>>;
 type CreateBookmarkForUserInput = {
   supabase: Supabase;
   userId: string;
+  workspaceId: string;
   url: string;
   title?: string;
   tags?: string[];
@@ -49,11 +51,13 @@ async function enqueueBookmarkProcessingJob(
   supabase: Supabase,
   bookmarkId: string,
   userId: string,
+  workspaceId: string,
   url: string
 ): Promise<ActionResult<string>> {
   const { data, error } = await supabase.rpc("enqueue_bookmark_processing_job", {
     p_bookmark_id: bookmarkId,
     p_user_id: userId,
+    p_workspace_id: workspaceId,
     p_url: url,
   });
 
@@ -116,6 +120,7 @@ function getCortexSearchReasons(result: CortexSearchResult) {
 async function createBookmarkForUser({
   supabase,
   userId,
+  workspaceId,
   url,
   title,
   tags = [],
@@ -136,6 +141,7 @@ async function createBookmarkForUser({
     .insert({
       id,
       user_id: userId,
+      workspace_id: workspaceId,
       url,
       title: fallbackTitle,
       tags,
@@ -161,7 +167,7 @@ async function createBookmarkForUser({
 
   if (error) return { success: false, error: error.message };
 
-  const job = await enqueueBookmarkProcessingJob(supabase, id, userId, url);
+  const job = await enqueueBookmarkProcessingJob(supabase, id, userId, workspaceId, url);
   if (!job.success) return { success: false, error: job.error };
 
   await triggerProcessorBestEffort("createBookmarkForUser");
@@ -201,6 +207,9 @@ export async function createBookmark(
       };
     }
 
+    const workspaceContext = await getWorkspaceContext(supabase, user);
+    const activeWorkspaceId = workspaceContext.activeWorkspace.id;
+
     const rawFolderId = formData.get("folder_id");
     const parsed = bookmarkCreateSchema.safeParse({
       url: formData.get("url"),
@@ -234,6 +243,7 @@ export async function createBookmark(
         .select("id")
         .eq("id", parsed.data.folder_id)
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .maybeSingle();
       if (!folder) {
         return { success: false, error: "Folder not found or not owned by you" };
@@ -244,6 +254,7 @@ export async function createBookmark(
     const result = await createBookmarkForUser({
       supabase,
       userId: user.id,
+      workspaceId: activeWorkspaceId,
       url: safeUrl.url,
       title: parsed.data.title,
       tags: parsed.data.tags,
@@ -273,6 +284,9 @@ export async function searchCortexBookmarks(
     return { success: false, error: "Not authenticated" };
   }
 
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
+
   const trimmed = query.replace(/\s+/g, " ").trim().slice(0, 500);
   const safeLimit = Math.max(1, Math.min(50, Math.floor(limit)));
 
@@ -284,6 +298,7 @@ export async function searchCortexBookmarks(
         query: "",
         result_count: 0,
         configured: isCortexConfigured(),
+        workspace_id: activeWorkspaceId,
       },
     };
   }
@@ -295,6 +310,7 @@ export async function searchCortexBookmarks(
   const cortexResults = await searchCortex({
     query: trimmed,
     userId: user.id,
+    workspaceId: activeWorkspaceId,
     limit: safeLimit,
   });
   if (!cortexResults) {
@@ -312,6 +328,7 @@ export async function searchCortexBookmarks(
         query: cortexResults.query ?? trimmed,
         result_count: 0,
         configured: true,
+        workspace_id: activeWorkspaceId,
         message: "No Cortex matches found.",
       },
     };
@@ -321,6 +338,7 @@ export async function searchCortexBookmarks(
     .from("bookmarks")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .in("id", orderedIds);
 
   if (error) {
@@ -366,6 +384,7 @@ export async function searchCortexBookmarks(
       query: cortexResults.query ?? trimmed,
       result_count: orderedBookmarks.length,
       configured: true,
+      workspace_id: activeWorkspaceId,
     },
   };
 }
@@ -399,6 +418,9 @@ export async function importBookmarks(
       error: "Import limit reached. Please try again later.",
     };
   }
+
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
   const rawUrls = formData.get("urls");
   const rawText = String(formData.get("text") ?? "");
@@ -481,6 +503,7 @@ export async function importBookmarks(
       .from("bookmarks")
       .select("id")
       .eq("user_id", user.id)
+      .eq("workspace_id", activeWorkspaceId)
       .eq("url", finalUrl)
       .maybeSingle();
 
@@ -505,6 +528,7 @@ export async function importBookmarks(
     const created = await createBookmarkForUser({
       supabase,
       userId: user.id,
+      workspaceId: activeWorkspaceId,
       url: normalizedUrl,
       tags: [],
     });
@@ -537,6 +561,8 @@ export async function updateBookmark(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
   const rawFolderId = formData.get("folder_id");
   const parsed = bookmarkUpdateSchema.safeParse({
@@ -559,6 +585,7 @@ export async function updateBookmark(
     .select("url, palette, fonts, screenshot_url, screenshot_path, screenshot_refreshed_at, long_screenshot_url, long_screenshot_path, long_screenshot_refreshed_at, summary, metadata_refreshed_at")
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .single();
 
   const domain = getDomain(url);
@@ -593,6 +620,7 @@ export async function updateBookmark(
         .select("id")
         .eq("id", parsedFolderId)
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .maybeSingle();
       if (!folder) {
         return { success: false, error: "Folder not found or not owned by you" };
@@ -636,6 +664,7 @@ export async function updateBookmark(
     .update(updatePayload)
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .select()
     .single();
 
@@ -649,7 +678,7 @@ export async function updateBookmark(
   }
 
   if (urlChanged) {
-    const job = await enqueueBookmarkProcessingJob(supabase, id, user.id, url);
+    const job = await enqueueBookmarkProcessingJob(supabase, id, user.id, activeWorkspaceId, url);
     if (!job.success) return { success: false, error: job.error };
     await triggerProcessorBestEffort("updateBookmark");
   }
@@ -676,6 +705,9 @@ export async function refreshBookmarkScreenshot(
     };
   }
 
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
+
   const rate = await checkRateLimit({
     scope: "bookmark-refresh",
     identifier: userLimitKey(user.id),
@@ -695,6 +727,7 @@ export async function refreshBookmarkScreenshot(
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .single();
 
   if (existingError || !existing) {
@@ -718,6 +751,7 @@ export async function refreshBookmarkScreenshot(
     })
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .select()
     .single();
 
@@ -732,6 +766,7 @@ export async function refreshBookmarkScreenshot(
     supabase,
     id,
     user.id,
+    activeWorkspaceId,
     existing.url
   );
 
@@ -770,6 +805,9 @@ export async function retryBookmarkProcessing(
     };
   }
 
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
+
   const rate = await checkRateLimit({
     scope: "bookmark-retry",
     identifier: userLimitKey(user.id),
@@ -789,6 +827,7 @@ export async function retryBookmarkProcessing(
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .single();
 
   if (existingError || !existing) {
@@ -812,6 +851,7 @@ export async function retryBookmarkProcessing(
     })
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .select()
     .single();
 
@@ -826,6 +866,7 @@ export async function retryBookmarkProcessing(
     supabase,
     id,
     user.id,
+    activeWorkspaceId,
     existing.url
   );
 
@@ -851,11 +892,14 @@ export async function getBookmarks(): Promise<ActionResult<Bookmark[]>> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .order("created_at", { ascending: false });
 
   if (error) return { success: false, error: error.message };
@@ -884,19 +928,23 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
     }
 
     console.log(`[deleteBookmark] Authenticated this user: ${user.email} (${user.id})`);
+    const workspaceContext = await getWorkspaceContext(supabase, user);
+    const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
     const { data: bookmarkForCleanup } = await supabase
       .from("bookmarks")
       .select("screenshot_path, long_screenshot_path, cortex_memory_id")
       .eq("id", id)
       .eq("user_id", user.id)
+      .eq("workspace_id", activeWorkspaceId)
       .maybeSingle();
 
     const { error, count } = await supabase
       .from("bookmarks")
       .delete({ count: "exact" })
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("workspace_id", activeWorkspaceId);
 
     if (error) {
       console.error("[deleteBookmark] Supabase delete error:", error);
@@ -908,7 +956,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
     if (count === 0) {
       const { data: exists } = await supabase
         .from("bookmarks")
-        .select("id, user_id")
+        .select("id, user_id, workspace_id")
         .eq("id", id)
         .maybeSingle();
 
@@ -925,6 +973,7 @@ export async function deleteBookmark(id: string): Promise<ActionResult> {
     await deleteBookmarkFromCortex({
       nyabagBookmarkId: id,
       userId: user.id,
+      workspaceId: activeWorkspaceId,
       memoryId: bookmarkForCleanup?.cortex_memory_id,
     });
     await removeBookmarkScreenshot(supabase, bookmarkForCleanup?.screenshot_path);

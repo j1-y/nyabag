@@ -3,6 +3,7 @@ import { BookmarkGrid } from "@/components/bookmarks/BookmarkGrid";
 import type { Bookmark } from "@/lib/types";
 import { getUserProfile } from "@/lib/profile";
 import { timeAsync } from "@/lib/perf";
+import { getWorkspaceContext } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,16 @@ export default async function DashboardPage() {
       return supabase.auth.getUser();
     });
 
+    const workspaceContext = user ? await getWorkspaceContext(supabase, user) : null;
+
     const [bookmarksResult, profile] = await Promise.all([
       timeAsync("dashboard: load bookmarks", async () => {
-        if (!user) return { data: [], error: null };
+        if (!user || !workspaceContext) return { data: [], error: null };
         return supabase
           .from("bookmarks")
           .select("*")
           .eq("user_id", user.id)
+          .eq("workspace_id", workspaceContext.activeWorkspace.id)
           .is("folder_id", null)
           .order("created_at", { ascending: false });
       }),

@@ -7,6 +7,7 @@ import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import { getDesignData, getDomain } from "@/lib/data";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
 import { extensionCors } from "@/lib/extension/cors";
+import { resolveWorkspaceForUser } from "@/lib/workspaces";
 
 type ExtensionCaptureType =
   | "page"
@@ -24,6 +25,7 @@ export type ExtensionBookmarkCapturePayload = {
   text?: string;
   imageBase64?: string;
   collectionId?: string | null;
+  workspaceId?: string | null;
   source?: string;
   /** Set by the extension when it has already uploaded a screenshot via upload-url/commit-screenshot */
   hasExtensionScreenshot?: boolean;
@@ -101,16 +103,19 @@ async function enqueueBookmarkProcessingJob({
   supabase,
   bookmarkId,
   userId,
+  workspaceId,
   url,
 }: {
   supabase: ReturnType<typeof createAdminServiceClient>;
   bookmarkId: string;
   userId: string;
+  workspaceId: string;
   url: string;
 }) {
   const { error } = await supabase.rpc("enqueue_bookmark_processing_job", {
     p_bookmark_id: bookmarkId,
     p_user_id: userId,
+    p_workspace_id: workspaceId,
     p_url: url,
   });
 
@@ -191,6 +196,23 @@ export async function createBookmarkCaptureResponse({
   }
 
   const supabase = createAdminServiceClient();
+  const resolvedWorkspace = await resolveWorkspaceForUser(
+    supabase,
+    auth.user.id,
+    payload.workspaceId ?? null
+  );
+
+  if (!resolvedWorkspace) {
+    return extensionCors(
+      NextResponse.json(
+        { error: "Workspace not found", code: payload.workspaceId ? "WORKSPACE_ACCESS_DENIED" : "WORKSPACE_NOT_FOUND" },
+        { status: 404 }
+      ),
+      origin
+    );
+  }
+
+  const workspaceId = resolvedWorkspace.workspace.id;
   const bookmarkId = crypto.randomUUID();
   const designData = getDesignData(safeTargetUrl.url);
   const domain = getDomain(safeTargetUrl.url);
@@ -214,6 +236,7 @@ export async function createBookmarkCaptureResponse({
     .insert({
       id: bookmarkId,
       user_id: auth.user.id,
+      workspace_id: workspaceId,
       url: safeTargetUrl.url,
       title,
       tags,
@@ -249,6 +272,7 @@ export async function createBookmarkCaptureResponse({
       supabase,
       bookmarkId,
       userId: auth.user.id,
+      workspaceId,
       url: safeTargetUrl.url,
     });
 

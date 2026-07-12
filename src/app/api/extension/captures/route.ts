@@ -10,6 +10,7 @@ import {
   type ExtensionBookmarkCapturePayload,
 } from "@/lib/extension/create-bookmark-capture";
 import { classifyExtensionCapture } from "@/lib/extension/capture-dispatch";
+import { resolveWorkspaceForUser } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,6 +27,7 @@ const SIGNED_URL_TTL = 365 * 24 * 60 * 60;
 
 type UnifiedCapturePayload = ExtensionBookmarkCapturePayload & {
   mimeType?: string;
+  workspaceId?: string | null;
 };
 
 export async function POST(request: NextRequest) {
@@ -112,6 +114,21 @@ export async function POST(request: NextRequest) {
   // ── Upload to Supabase Storage ───────────────────────────────────────────────
   const path = `${auth.user.id}/${crypto.randomUUID()}.jpg`;
   const supabase = createAdminServiceClient();
+  const resolvedWorkspace = await resolveWorkspaceForUser(
+    supabase,
+    auth.user.id,
+    body.workspaceId ?? null
+  );
+
+  if (!resolvedWorkspace) {
+    return extensionCors(
+      NextResponse.json(
+        { error: "Workspace not found", code: body.workspaceId ? "WORKSPACE_ACCESS_DENIED" : "WORKSPACE_NOT_FOUND" },
+        { status: 404 }
+      ),
+      origin
+    );
+  }
 
   const { error: uploadError } = await supabase.storage
     .from(CAPTURES_BUCKET)
@@ -139,6 +156,7 @@ export async function POST(request: NextRequest) {
     .from("captures")
     .insert({
       user_id: auth.user.id,
+      workspace_id: resolvedWorkspace.workspace.id,
       path,
       capture_url: captureUrl,
       page_url: pageUrl ?? null,

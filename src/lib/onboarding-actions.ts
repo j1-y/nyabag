@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { ActionResult, Bookmark, UserOnboarding } from "@/lib/types";
 import {
   onboardingFocusAreaSchema,
@@ -67,12 +68,14 @@ export async function getOnboardingBookmarkPreview(
   if (!user) {
     return onboardingPreviewError("Not authenticated");
   }
+  const workspaceContext = await getWorkspaceContext(supabase, user);
 
   const { data, error } = await supabase
     .from("bookmarks")
     .select(ONBOARDING_BOOKMARK_PREVIEW_SELECT)
     .eq("id", bookmarkId)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceContext.activeWorkspace.id)
     .maybeSingle();
 
   if (error) {
@@ -99,12 +102,14 @@ export async function saveOnboardingPreferences(
   if (!user) {
     return onboardingError("Not authenticated");
   }
+  const workspaceContext = await getWorkspaceContext(supabase, user);
 
   const existing = await getExistingOnboarding(supabase, user.id);
   const now = new Date().toISOString();
 
   let payload: Partial<UserOnboarding> = {
     user_id: user.id,
+    workspace_id: workspaceContext.activeWorkspace.id,
     updated_at: now,
   };
 
@@ -152,6 +157,7 @@ export async function saveOnboardingPreferences(
     .upsert(
       {
         user_id: user.id,
+        workspace_id: workspaceContext.activeWorkspace.id,
         workspace_type: payload.workspace_type ?? existing?.workspace_type ?? "",
         primary_goal: payload.primary_goal ?? existing?.primary_goal ?? "",
         focus_area: payload.focus_area ?? existing?.focus_area ?? "",
@@ -182,6 +188,7 @@ export async function completeOnboarding(): Promise<ActionResult<UserOnboarding>
   if (!user) {
     return onboardingError("Not authenticated");
   }
+  const workspaceContext = await getWorkspaceContext(supabase, user);
 
   const existing = await getExistingOnboarding(supabase, user.id);
   const now = new Date().toISOString();
@@ -191,6 +198,7 @@ export async function completeOnboarding(): Promise<ActionResult<UserOnboarding>
     .upsert(
       {
         user_id: user.id,
+        workspace_id: workspaceContext.activeWorkspace.id,
         workspace_type: existing?.workspace_type ?? "",
         primary_goal: existing?.primary_goal ?? "",
         focus_area: existing?.focus_area ?? "",

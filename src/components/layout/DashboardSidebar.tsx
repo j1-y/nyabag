@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "@/lib/actions";
 import { FolderTree } from "@/components/folders/FolderTree";
-import type { BookmarkFolder } from "@/lib/types";
+import { WorkspaceSwitcher } from "@/components/workspaces/WorkspaceSwitcher";
+import type { BookmarkFolder, Workspace, WorkspaceRole } from "@/lib/types";
 import {
   Tooltip,
   TooltipContent,
@@ -29,6 +30,9 @@ type DashboardSidebarProps = {
   profileName: string;
   profileAvatarUrl: string | null;
   folders: BookmarkFolder[];
+  workspaces: Workspace[];
+  activeWorkspace: Workspace;
+  activeWorkspaceRole: WorkspaceRole;
 };
 
 type NavItem = {
@@ -89,6 +93,9 @@ export function DashboardSidebar({
   profileName,
   profileAvatarUrl,
   folders,
+  workspaces,
+  activeWorkspace,
+  activeWorkspaceRole,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const displayName = profileName.trim() || userEmail || "Profile";
@@ -122,17 +129,12 @@ export function DashboardSidebar({
         </div>
 
         {/* ── Nav ── */}
-        {!collapsed && (
-          <div className="dashboard-sidebar-workspace" aria-label="Personal Nyabag workspace">
-            <span className="dashboard-sidebar-workspace-icon" aria-hidden="true">
-              {userInitials}
-            </span>
-            <span className="dashboard-sidebar-workspace-copy">
-              <small>Personal workspace</small>
-              <strong>{displayName}</strong>
-            </span>
-          </div>
-        )}
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeWorkspace={activeWorkspace}
+          activeWorkspaceRole={activeWorkspaceRole}
+          collapsed={collapsed}
+        />
 
         <nav
           className="dashboard-sidebar-scroll"

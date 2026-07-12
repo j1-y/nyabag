@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getFolderBreadcrumbs } from "@/lib/folders";
 import { FolderPageClient } from "@/components/folders/FolderPageClient";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { Bookmark, BookmarkFolder } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +21,15 @@ export default async function FolderPage({
   } = await supabase.auth.getUser();
 
   if (!user) notFound();
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
   // All folders — needed for breadcrumbs, subfolder list, and sidebar tree
   const { data: allFoldersData } = await supabase
     .from("bookmark_folders")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
@@ -50,12 +54,14 @@ export default async function FolderPage({
         .from("bookmarks")
         .select("*")
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .is("folder_id", null)
         .order("created_at", { ascending: false })
     : supabase
         .from("bookmarks")
         .select("*")
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .eq("folder_id", folderId)
         .order("created_at", { ascending: false });
 

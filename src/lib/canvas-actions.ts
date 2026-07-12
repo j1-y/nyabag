@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_SECTION_COLOR } from "@/lib/content-colors";
 import { CANVAS_NOTE_COLUMNS, CANVAS_SECTION_COLUMNS } from "@/lib/canvas-data";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import { isPerfEnabled, timeAsync } from "@/lib/perf";
 import { checkRateLimit, userLimitKey } from "@/lib/rate-limit";
 import {
@@ -33,6 +34,7 @@ import {
   SOCIAL_NOTE_PREFIX,
   toSocialNoteContent,
 } from "@/lib/social-embeds";
+import type { User } from "@supabase/supabase-js";
 
 const MEDIA_BUCKET = "canvas-media";
 const SIGNED_URL_TTL = 60 * 60;
@@ -45,6 +47,7 @@ const NOTE_CHROME_WIDTH = 22;
 const NOTE_CHROME_HEIGHT = 22;
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
+type ActiveCanvasUser = User & { activeWorkspaceId: string };
 
 type SectionWrapResult = {
   section: CanvasSection;
@@ -86,17 +89,20 @@ async function withSignedUrl(
   return { ...note, media_url: data.signedUrl };
 }
 
-async function getUser(supabase: Supabase) {
+async function getUser(supabase: Supabase): Promise<ActiveCanvasUser | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return user;
+  if (!user) return null;
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  return Object.assign(user, { activeWorkspaceId: workspaceContext.activeWorkspace.id });
 }
 
 async function getOwnedNote(
   supabase: Supabase,
   userId: string,
+  workspaceId: string,
   id: string
 ): Promise<CanvasNote | null> {
   const { data, error } = await supabase
@@ -104,6 +110,7 @@ async function getOwnedNote(
     .select(CANVAS_NOTE_COLUMNS)
     .eq("id", id)
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .single();
 
   if (error || !data) return null;
@@ -113,6 +120,7 @@ async function getOwnedNote(
 async function getOwnedSection(
   supabase: Supabase,
   userId: string,
+  workspaceId: string,
   id: string
 ): Promise<CanvasSection | null> {
   const { data, error } = await supabase
@@ -120,6 +128,7 @@ async function getOwnedSection(
     .select(CANVAS_SECTION_COLUMNS)
     .eq("id", id)
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .single();
 
   if (error || !data) return null;
@@ -132,10 +141,24 @@ async function removeStoredMedia(supabase: Supabase, note: CanvasNote | null) {
   }
 }
 
-async function getCanvasSnapshot(supabase: Supabase): Promise<CanvasSnapshot> {
+async function getCanvasSnapshot(
+  supabase: Supabase,
+  userId: string,
+  workspaceId: string
+): Promise<CanvasSnapshot> {
   const [{ data: notesData }, { data: sectionsData }] = await Promise.all([
-    supabase.from("canvas_notes").select(CANVAS_NOTE_COLUMNS).order("z_index", { ascending: true }),
-    supabase.from("canvas_sections").select(CANVAS_SECTION_COLUMNS).order("z_index", { ascending: true }),
+    supabase
+      .from("canvas_notes")
+      .select(CANVAS_NOTE_COLUMNS)
+      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
+      .order("z_index", { ascending: true }),
+    supabase
+      .from("canvas_sections")
+      .select(CANVAS_SECTION_COLUMNS)
+      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
+      .order("z_index", { ascending: true }),
   ]);
   const notes = (notesData ?? []) as unknown as CanvasNote[];
   const signedNotes = await Promise.all(notes.map((note) => withSignedUrl(supabase, note)));
@@ -146,11 +169,16 @@ async function getCanvasSnapshot(supabase: Supabase): Promise<CanvasSnapshot> {
   };
 }
 
-async function getNextNoteZIndex(supabase: Supabase, userId: string): Promise<number> {
+async function getNextNoteZIndex(
+  supabase: Supabase,
+  userId: string,
+  workspaceId: string
+): Promise<number> {
   const { data: maxRow } = await supabase
     .from("canvas_notes")
     .select("z_index")
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("z_index", { ascending: false })
     .limit(1)
     .single();
@@ -234,7 +262,7 @@ export async function createNote(
       };
     }
 
-    const z_index = await getNextNoteZIndex(supabase, user.id);
+    const z_index = await getNextNoteZIndex(supabase, user.id, user.activeWorkspaceId);
     const isSocial = type === "social";
     const noteWidth = width ?? 240;
     const noteHeight = height ?? 180;
@@ -267,6 +295,7 @@ export async function createNote(
       .from("canvas_notes")
       .insert({
         user_id: user.id,
+        workspace_id: user.activeWorkspaceId,
         ...noteInput,
         ...(section_id ? { section_id } : {}),
       })
@@ -323,7 +352,7 @@ export async function createTextNoteWithRichContent(
       };
     }
 
-    const z_index = zIndex ?? (await getNextNoteZIndex(supabase, user.id));
+    const z_index = zIndex ?? (await getNextNoteZIndex(supabase, user.id, user.activeWorkspaceId));
 
     const parsed = noteCreateSchema.safeParse({
       type,
@@ -355,6 +384,7 @@ export async function createTextNoteWithRichContent(
       .from("canvas_notes")
       .insert({
         user_id: user.id,
+        workspace_id: user.activeWorkspaceId,
         ...noteInput,
         ...(section_id ? { section_id } : {}),
       })
@@ -435,7 +465,7 @@ export async function createSocialNoteFromUrl(
 
   const width = clampNoteWidth(embedSize.width + NOTE_CHROME_WIDTH);
   const height = clampNoteHeight(embedSize.height + NOTE_CHROME_HEIGHT);
-  const z_index = await getNextNoteZIndex(supabase, user.id);
+  const z_index = await getNextNoteZIndex(supabase, user.id, user.activeWorkspaceId);
 
   const parsed = noteCreateSchema.safeParse({
     type: "social",
@@ -465,6 +495,7 @@ export async function createSocialNoteFromUrl(
     .from("canvas_notes")
     .insert({
       user_id: user.id,
+      workspace_id: user.activeWorkspaceId,
       ...noteInput,
       ...(section_id ? { section_id } : {}),
     })
@@ -533,7 +564,7 @@ export async function createMediaNoteFromUrl(
     };
   }
 
-  const z_index = await getNextNoteZIndex(supabase, user.id);
+  const z_index = await getNextNoteZIndex(supabase, user.id, user.activeWorkspaceId);
 
   const parsed = noteCreateSchema.safeParse({
     type,
@@ -563,6 +594,7 @@ export async function createMediaNoteFromUrl(
     .from("canvas_notes")
     .insert({
       user_id: user.id,
+      workspace_id: user.activeWorkspaceId,
       ...noteInput,
       ...(section_id ? { section_id } : {}),
     })
@@ -652,7 +684,7 @@ export async function createMediaNoteWithUpload(
     };
   }
 
-  const z_index = await getNextNoteZIndex(supabase, user.id);
+  const z_index = await getNextNoteZIndex(supabase, user.id, user.activeWorkspaceId);
 
   const parsed = noteCreateSchema.safeParse({
     type,
@@ -682,6 +714,7 @@ export async function createMediaNoteWithUpload(
     .from("canvas_notes")
     .insert({
       user_id: user.id,
+      workspace_id: user.activeWorkspaceId,
       ...noteInput,
       ...(section_id ? { section_id } : {}),
     })
@@ -713,7 +746,8 @@ export async function createMediaNoteWithUpload(
       .from("canvas_notes")
       .delete()
       .eq("id", note.id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("workspace_id", user.activeWorkspaceId);
 
     return {
       success: false,
@@ -732,6 +766,7 @@ export async function createMediaNoteWithUpload(
     })
     .eq("id", note.id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -742,7 +777,8 @@ export async function createMediaNoteWithUpload(
         .from("canvas_notes")
         .delete()
         .eq("id", note.id)
-        .eq("user_id", user.id),
+        .eq("user_id", user.id)
+        .eq("workspace_id", user.activeWorkspaceId),
     ]);
 
     return {
@@ -774,7 +810,7 @@ export async function updateNoteContent(
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const oldNote = await getOwnedNote(supabase, user.id, id);
+  const oldNote = await getOwnedNote(supabase, user.id, user.activeWorkspaceId, id);
   if (!oldNote) return { success: false, error: "Note not found" };
 
   const socialUrl = getSocialNoteUrl(content);
@@ -811,6 +847,7 @@ export async function updateNoteContent(
     .update(updates)
     .eq("id", noteId)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -828,7 +865,7 @@ export async function updateTextNoteRichContent(
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const oldNote = await getOwnedNote(supabase, user.id, id);
+  const oldNote = await getOwnedNote(supabase, user.id, user.activeWorkspaceId, id);
   if (!oldNote) return { success: false, error: "Note not found" };
   if (oldNote.type !== "text" && oldNote.type !== "text_frame") {
     return { success: false, error: "Only text notes support rich content" };
@@ -854,6 +891,7 @@ export async function updateTextNoteRichContent(
     })
     .eq("id", parsed.data.id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .in("type", ["text", "text_frame"])
     .select()
     .single();
@@ -881,6 +919,7 @@ export async function updateNoteColor(
     .update({ color: parsed.data.color })
     .eq("id", parsed.data.id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -897,7 +936,7 @@ export async function uploadNoteMedia(
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const note = await getOwnedNote(supabase, user.id, id);
+  const note = await getOwnedNote(supabase, user.id, user.activeWorkspaceId, id);
   if (!note) return { success: false, error: "Note not found" };
   if (note.type !== "image" && note.type !== "video") {
     return { success: false, error: "Only image and video notes support uploads" };
@@ -939,6 +978,7 @@ export async function uploadNoteMedia(
     })
     .eq("id", note.id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -958,7 +998,7 @@ export async function removeNoteMedia(id: string): Promise<ActionResult<CanvasNo
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const note = await getOwnedNote(supabase, user.id, id);
+  const note = await getOwnedNote(supabase, user.id, user.activeWorkspaceId, id);
   if (!note) return { success: false, error: "Note not found" };
 
   const { data, error } = await supabase
@@ -972,6 +1012,7 @@ export async function removeNoteMedia(id: string): Promise<ActionResult<CanvasNo
     })
     .eq("id", note.id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -1000,7 +1041,8 @@ export async function updateNotePosition(
       .from("canvas_notes")
       .update({ x, y })
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .eq("workspace_id", user.activeWorkspaceId);
 
     if (error) return { success: false, error: error.message };
     return { success: true, data: undefined };
@@ -1027,7 +1069,8 @@ export async function updateNoteSize(
     .from("canvas_notes")
     .update({ width, height })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId);
 
   if (error) return { success: false, error: error.message };
   return { success: true, data: undefined };
@@ -1042,6 +1085,7 @@ export async function bringNoteToFront(id: string): Promise<ActionResult<number>
     .from("canvas_notes")
     .select("z_index")
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .order("z_index", { ascending: false })
     .limit(1)
     .single();
@@ -1051,7 +1095,8 @@ export async function bringNoteToFront(id: string): Promise<ActionResult<number>
     .from("canvas_notes")
     .update({ z_index: newZIndex })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId);
 
   if (error) return { success: false, error: error.message };
   return { success: true, data: newZIndex };
@@ -1076,6 +1121,7 @@ export async function deleteNotes(
       .from("canvas_notes")
       .select(CANVAS_NOTE_COLUMNS)
       .eq("user_id", user.id)
+      .eq("workspace_id", user.activeWorkspaceId)
       .in("id", uniqueIds);
 
     if (lookupError) return { success: false, error: lookupError.message };
@@ -1089,11 +1135,12 @@ export async function deleteNotes(
       .from("canvas_notes")
       .delete()
       .eq("user_id", user.id)
+      .eq("workspace_id", user.activeWorkspaceId)
       .in("id", uniqueIds);
 
     if (error) return { success: false, error: error.message };
     await Promise.all(notes.map((note) => removeStoredMedia(supabase, note)));
-    const snapshot = options.returnSnapshot ? await getCanvasSnapshot(supabase) : undefined;
+    const snapshot = options.returnSnapshot ? await getCanvasSnapshot(supabase, user.id, user.activeWorkspaceId) : undefined;
     return { success: true, data: { deletedIds, removedMediaPaths, snapshot } };
   });
 }
@@ -1120,6 +1167,7 @@ export async function createSectionFromNotes(
     .from("canvas_notes")
     .select("*")
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .in("id", uniqueIds);
 
   if (notesError) return { success: false, error: notesError.message };
@@ -1145,6 +1193,7 @@ export async function createSectionFromNotes(
 
   const sectionInput = {
     user_id: user.id,
+    workspace_id: user.activeWorkspaceId,
     label: parsed.data.label,
     x: minX - SECTION_PAD_X,
     y: minY - SECTION_PAD_TOP,
@@ -1167,11 +1216,17 @@ export async function createSectionFromNotes(
     .from("canvas_notes")
     .update({ section_id: section.id })
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .in("id", uniqueIds)
     .select();
 
   if (updateError) {
-    await supabase.from("canvas_sections").delete().eq("id", section.id).eq("user_id", user.id);
+    await supabase
+      .from("canvas_sections")
+      .delete()
+      .eq("id", section.id)
+      .eq("user_id", user.id)
+      .eq("workspace_id", user.activeWorkspaceId);
     return { success: false, error: updateError.message };
   }
 
@@ -1200,6 +1255,7 @@ export async function updateSectionLabel(
     .update({ label: parsed.data.label })
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -1223,14 +1279,15 @@ export async function updateSectionPosition(
     return { success: false, error: parsed.error.issues[0].message };
   }
 
-  const section = await getOwnedSection(supabase, user.id, id);
+  const section = await getOwnedSection(supabase, user.id, user.activeWorkspaceId, id);
   if (!section) return { success: false, error: "Section not found" };
 
   const { error: sectionError } = await supabase
     .from("canvas_sections")
     .update({ x: parsed.data.x, y: parsed.data.y })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId);
 
   if (sectionError) return { success: false, error: sectionError.message };
 
@@ -1241,6 +1298,7 @@ export async function updateSectionPosition(
         .update({ x: note.x, y: note.y })
         .eq("id", note.id)
         .eq("user_id", user.id)
+        .eq("workspace_id", user.activeWorkspaceId)
         .eq("section_id", id)
     )
   );
@@ -1269,6 +1327,7 @@ export async function updateSectionSize(
     .update({ width: parsed.data.width, height: parsed.data.height })
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId)
     .select()
     .single();
 
@@ -1281,14 +1340,15 @@ export async function deleteSection(id: string): Promise<ActionResult> {
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const section = await getOwnedSection(supabase, user.id, id);
+  const section = await getOwnedSection(supabase, user.id, user.activeWorkspaceId, id);
   if (!section) return { success: false, error: "Section not found" };
 
   const { error: ungroupError } = await supabase
     .from("canvas_notes")
     .update({ section_id: null })
     .eq("section_id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId);
 
   if (ungroupError) return { success: false, error: ungroupError.message };
 
@@ -1296,7 +1356,8 @@ export async function deleteSection(id: string): Promise<ActionResult> {
     .from("canvas_sections")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", user.activeWorkspaceId);
 
   if (error) return { success: false, error: error.message };
   revalidatePath("/canvas");
@@ -1318,3 +1379,4 @@ export async function getXPostEmbedHtml(url: string): Promise<ActionResult<strin
     ? { success: true, data: metadata.data.html }
     : { success: false, error: metadata.error };
 }
+

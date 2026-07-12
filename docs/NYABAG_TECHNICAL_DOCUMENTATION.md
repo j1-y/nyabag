@@ -1,8 +1,8 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-07-10
+Last updated: 2026-07-12
 
-Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines a visual bookmark moodboard with a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated workspace lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
+Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines personal workspaces, a visual bookmark moodboard, and a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated product lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
 For agent workflows, start with `AGENTS.md` and `.ai-memory/README.md`. The `.ai-memory/` layer is the short-form working memory for coding agents, while this document remains the canonical architecture source. Bookmark search details live in `docs/BOOKMARK_SEARCH_ARCHITECTURE.md`.
 
@@ -30,8 +30,9 @@ For agent workflows, start with `AGENTS.md` and `.ai-memory/README.md`. The `.ai
 
 ## Product Overview
 
-Nyabag helps users collect websites and visual references, then organize ideas on a canvas. The product has two main surfaces:
+Nyabag helps users collect websites and visual references, then organize ideas on a canvas. The product has one main content boundary plus two primary surfaces:
 
+- **Workspaces**: first-party personal containers that scope saved content. V1 supports same-user create, switch, and rename only.
 - **Bookmarks**: a clean visual moodboard of saved websites, with screenshots, extracted palettes, tags, summaries, detected fonts, and detail pages.
 - **Notes**: an infinite canvas inspired by FigJam/Figma, supporting draggable and resizable notes, media notes, social embeds, and grouped sections.
 
@@ -39,12 +40,22 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 
 ## Feature Inventory
 
+### Workspaces
+
+- Active content boundary for bookmarks, folders, canvas notes/sections, captures, onboarding preview state, Cortex records, and Oracle processing jobs.
+- Existing `user_id` columns remain owner/creator metadata; `workspace_id` is the scoping container.
+- Active workspace is resolved server-side from the `nyabag-active-workspace-id` cookie after validating `workspace_members`.
+- Fallback order is valid cookie workspace, newest membership workspace, then auto-created `Personal`.
+- Sidebar switcher supports create, switch, and rename.
+- V1 intentionally has no workspace delete UI, invites, billing, sharing, or real-time collaboration.
+
 ### Bookmarks
 
 - Add, edit, and delete bookmarks.
 - First-run onboarding asks users to save one real bookmark so the core product loop is visible before setup work.
 - Moodboard-style bookmark grid.
 - Cortex-backed active bookmark search. Hosted Cortex validates the internal token, scopes search by user, evidence-gates specific visual queries, and returns `nyabagBookmarkId` values; Nyabag owner-filters those IDs through Supabase before returning cards.
+- Bookmark queries and mutations also filter by active `workspace_id`.
 - Empty search still uses the normal local bookmark list with tag and recent filters.
 - Tag filtering and recent filtering.
 - Visual detail page for each bookmark.
@@ -153,6 +164,8 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Authenticated starts create short-lived one-time exchange codes in `extension_auth_codes`; only code hashes are stored.
 - `/api/extension/auth/exchange` validates the same redirect URI, consumes the code exactly once, mints a separate Supabase session for the extension, and returns the same token shape as password login.
 - Existing extension `me`, `collections`, `capture`, `upload-url`, and `commit-screenshot` routes remain bearer-token compatible.
+- `/api/extension/collections` returns workspace rows alongside the legacy collection shape.
+- `/api/extension/captures` accepts optional `workspaceId`; if provided, the route uses it only when the authenticated user is a member. Otherwise it falls back to the user's default workspace or returns a safe workspace error.
 
 ## Tech Stack
 
@@ -208,6 +221,7 @@ src/components/
   layout/                            Dashboard shell, navigation, sidebar, mobile capture
   profile/                           Profile form
   ui/                                Small UI primitives
+  workspaces/                        Workspace switcher and create/rename dialogs
 
 src/hooks/
   useBookmarks.tsx                   Bookmark client state and filtering
@@ -217,6 +231,8 @@ src/lib/
   actions.ts                         Bookmark/profile/auth server actions
   canvas-actions.ts                  Canvas server actions
   canvas-data.ts                     Server data loading for canvas
+  workspace-actions.ts               Workspace create, switch, and rename server actions
+  workspaces.ts                      Active workspace resolver and membership helpers
   data.ts                            Bookmark design data, Microlink helpers, formatting
   metadata.ts                        Metadata scraper and tag inference
   profile.ts                         Profile loading and avatar URL helpers
@@ -250,6 +266,8 @@ supabase/
 
 The dashboard is wrapped by `src/components/layout/DashboardShell.tsx`. Desktop app navigation lives in `DashboardSidebar`; the top Bookmarks/Canvas feature switch was removed so pages render directly inside a curved white main panel. The sidebar boundary uses viewport-fixed shell corner masks so the top and bottom curve remains visible while long dashboard pages scroll.
 
+`src/app/(dashboard)/layout.tsx` resolves the active workspace after auth/onboarding checks, filters sidebar folder loading by that workspace, and passes `workspaces`, `activeWorkspace`, and `activeWorkspaceRole` into `DashboardShell`. The sidebar renders `WorkspaceSwitcher` instead of a hardcoded "Personal workspace" block.
+
 Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do not add duplicate `/app` routes.
 
 `DashboardShell` responsibilities:
@@ -264,6 +282,35 @@ Legacy `/app/*` URLs are compatibility redirects handled by `src/proxy.ts`; do n
 
 The complete schema lives in `supabase/schema.sql`. It is designed to be safe to rerun and uses `DROP POLICY IF EXISTS` / `CREATE POLICY` patterns to avoid duplicate policy errors.
 
+### `workspaces`
+
+Stores same-user personal workspace containers.
+
+Important fields:
+
+| Field | Purpose |
+| --- | --- |
+| `id` | Workspace UUID |
+| `owner_id` | Creating/owning user |
+| `name` | Display name |
+| `slug` | Stable local slug for future routing/use |
+| `icon` | Future icon metadata |
+| `color` | Future color metadata |
+
+### `workspace_members`
+
+Maps users to workspaces.
+
+Important fields:
+
+| Field | Purpose |
+| --- | --- |
+| `workspace_id` | Referenced workspace |
+| `user_id` | Member user |
+| `role` | `owner`, `admin`, `member`, or `viewer` |
+
+V1 only creates owner memberships in the UI. `ensure_personal_workspace(p_user_id uuid)` creates a default `Personal` workspace and owner membership when a user has no workspace rows.
+
 ### `bookmarks`
 
 Stores saved website references.
@@ -274,6 +321,7 @@ Important fields:
 | --- | --- |
 | `id` | Bookmark UUID |
 | `user_id` | Owner, references `auth.users(id)` |
+| `workspace_id` | Content container, references `workspaces(id)` |
 | `url` | Saved website URL |
 | `title` | Display title |
 | `tags` | User and inferred tags |
@@ -298,7 +346,7 @@ Important constraints:
 - Summary max length: 1000.
 - Note max length: 2000.
 - Cortex status must be `pending`, `processing`, `ready`, `failed`, or `skipped`.
-- RLS restricts rows to `auth.uid() = user_id`.
+- RLS restricts rows to `auth.uid() = user_id` and a valid `workspace_members` row for `workspace_id`.
 
 ### `profiles`
 
@@ -325,6 +373,7 @@ Important fields:
 | --- | --- |
 | `id` | Note UUID |
 | `user_id` | Owner |
+| `workspace_id` | Content container |
 | `section_id` | Optional section membership |
 | `type` | `text`, `link`, `image`, `video`, or `social` |
 | `content` | Text, link URL, video URL, or social-prefixed URL |
@@ -342,7 +391,7 @@ Important constraints:
 - Note type check includes `social`.
 - Media source must be null, `url`, or `upload`.
 - Width min 100, height min 80 through application validation.
-- RLS restricts rows to the owner.
+- RLS restricts rows to the owner and workspace membership.
 
 ### `canvas_sections`
 
@@ -352,6 +401,7 @@ Important fields:
 
 - `id`
 - `user_id`
+- `workspace_id`
 - `label`
 - `x`, `y`
 - `width`, `height`
@@ -359,13 +409,22 @@ Important fields:
 - `z_index`
 - timestamps
 
-Sections are owner-scoped with RLS. Deleting a section should ungroup notes rather than delete them.
+Sections are owner/workspace-scoped with RLS. Deleting a section should ungroup notes rather than delete them.
+
+### `bookmark_folders`
+
+Stores nested folder organization for bookmarks. Folder rows include `workspace_id`; sibling duplicate checks, parent validation, folder pages, reparenting, and bookmark moves are all limited to one workspace.
+
+### `captures`
+
+Stores extension/gallery screenshot captures. `captures` is defined in the canonical schema rather than only in a migration file. Rows include `workspace_id`, while storage paths remain user-based.
 
 ### Storage Buckets
 
 | Bucket | Purpose | Visibility |
 | --- | --- | --- |
 | `canvas-media` | Uploaded image/video note files | Private, signed URL access |
+| `captures` | Extension screenshot captures | Private, signed URL access |
 | `profile-avatars` | User avatars | Public URL access |
 
 `canvas-media` paths are structured under the user and note:
@@ -400,16 +459,17 @@ Security is enforced at several layers:
 
 1. **Route/layout layer**
    - Dashboard routes require Supabase session access through server-side clients.
+   - Dashboard layout resolves the active workspace server-side before loading workspace-scoped data.
    - Mobile users are gated to URL capture after authentication.
 
 2. **Server action layer**
    - Every mutation calls `supabase.auth.getUser()`.
    - Mutations return `{ success: false, error: "Not authenticated" }` when no user exists.
-   - Updates/deletes include `.eq("user_id", user.id)`.
+   - Workspace-scoped updates/deletes include `.eq("user_id", user.id)` and `.eq("workspace_id", activeWorkspaceId)`.
 
 3. **RLS layer**
    - Tables use row-level security.
-   - Policies check `auth.uid() = user_id`.
+   - Workspace-scoped policies check `auth.uid() = user_id` and valid membership for `workspace_id`.
 
 4. **Storage layer**
    - Canvas media is private.
@@ -426,6 +486,7 @@ Security is enforced at several layers:
    - `/api/extension/auth/start` validates redirect URI and state before reading the web session.
    - One-time exchange codes are short-lived, user-scoped, hashed at rest, and consumed with a single conditional update.
    - `/api/extension/auth/exchange` returns normal Supabase tokens; extension APIs continue to verify them with `Authorization: Bearer <access_token>`.
+   - Extension capture endpoints may accept optional `workspaceId`, but service-role handlers must validate membership before using it.
 
 ## Bookmark System
 
@@ -451,17 +512,19 @@ Flow:
 
 1. Create Supabase server client.
 2. Resolve authenticated user.
-3. Validate form data with `bookmarkCreateSchema`.
-4. Normalize/parse URL.
-5. Choose fallback title:
+3. Resolve active workspace with `getWorkspaceContext(...)`.
+4. Validate form data with `bookmarkCreateSchema`.
+5. Normalize/parse URL.
+6. Validate any target folder belongs to the active workspace.
+7. Choose fallback title:
    - explicit user title
    - formatted domain
    - raw URL fallback
-6. Resolve design data from known domain database or deterministic fallback.
-7. Insert bookmark row with `processing_status = "queued"`.
-8. Enqueue `bookmark_processing_jobs`.
-9. Return immediately; Oracle polls and processes the queued job.
-10. Revalidate `/`.
+8. Resolve design data from known domain database or deterministic fallback.
+9. Insert bookmark row with `processing_status = "queued"` and `workspace_id`.
+10. Enqueue `bookmark_processing_jobs` with `workspace_id`.
+11. Return immediately; Oracle polls and processes the queued job.
+12. Revalidate `/`.
 
 ### Bookmark Update Flow
 
@@ -470,11 +533,13 @@ Main action: `updateBookmark(formData)`.
 Flow:
 
 1. Validate input with `bookmarkUpdateSchema`.
-2. Fetch existing bookmark metadata.
+2. Resolve active workspace.
+3. Fetch existing bookmark metadata by bookmark id, user id, and workspace id.
 3. If URL changed, clear stale normal and long preview fields and set `processing_status = "queued"`.
 4. If URL did not change, preserve screenshots, palette, fonts, and summary where possible.
-5. Update the owner-scoped row.
-6. If URL changed, enqueue a new processing job for Oracle.
+5. Validate any target folder belongs to the same workspace.
+6. Update the owner/workspace-scoped row.
+7. If URL changed, enqueue a new processing job for Oracle with the same workspace.
 7. Revalidate `/`.
 
 ### Bookmark Delete Flow
@@ -484,11 +549,12 @@ Main action: `deleteBookmark(id)`.
 Flow:
 
 1. Resolve authenticated user.
+2. Resolve active workspace.
 2. Read screenshot paths and `cortex_memory_id` for cleanup.
-3. Delete bookmark by `id` and `user_id`.
+3. Delete bookmark by `id`, `user_id`, and `workspace_id`.
 4. If no rows were affected, distinguish between not found and wrong owner where possible.
 5. Revalidate `/`.
-6. Best-effort call Cortex to delete matching Neon memory and embedding rows by bookmark id plus user id.
+6. Best-effort call Cortex to delete matching Neon memory and embedding rows by bookmark id plus user id and workspace id.
 7. Remove stored normal and long screenshots.
 
 The client currently performs optimistic delete in `useBookmarks`, then rolls back on failure.
@@ -771,13 +837,23 @@ Modules:
 | `consumeExtensionExchangeCode(...)` | Atomically consume a matching unexpired code exactly once |
 | `createExtensionSessionForConsumedCode(...)` | Mint and verify a separate Supabase session for the extension |
 
+### `src/lib/workspaces.ts` and `src/lib/workspace-actions.ts`
+
+| Function | Purpose |
+| --- | --- |
+| `getWorkspaceContext(...)` | Resolve active workspace from cookie, membership rows, and Personal fallback |
+| `resolveWorkspaceForUser(...)` | Service-route helper for optional workspace ids from extension/API payloads |
+| `setActiveWorkspace(id)` | Validate membership, set active workspace cookie, and revalidate app routes |
+| `createWorkspace(formData)` | Create workspace plus owner membership and make it active |
+| `renameWorkspace(formData)` | Rename an owned/manageable workspace |
+
 ### `src/lib/actions.ts`
 
 | Function | Purpose | Side effects |
 | --- | --- | --- |
-| `createBookmark(formData)` | Create bookmark and enqueue metadata/screenshot enrichment | Inserts `bookmarks`, enqueues Oracle work, revalidates `/` |
-| `updateBookmark(formData)` | Update bookmark and refresh metadata if URL changes | Updates `bookmarks`, revalidates `/` |
-| `deleteBookmark(id)` | Delete owner-scoped bookmark | Deletes `bookmarks`, revalidates `/` |
+| `createBookmark(formData)` | Create active-workspace bookmark and enqueue metadata/screenshot enrichment | Inserts `bookmarks`, enqueues Oracle work, revalidates `/` |
+| `updateBookmark(formData)` | Update active-workspace bookmark and refresh metadata if URL changes | Updates `bookmarks`, revalidates `/` |
+| `deleteBookmark(id)` | Delete active-workspace bookmark | Deletes `bookmarks`, revalidates `/`, cleans storage/Cortex best-effort |
 | `updateProfile(formData)` | Upsert profile and optional avatar | Uploads/removes avatar, upserts `profiles`, revalidates routes |
 | `signOut()` | End Supabase session | Calls Supabase sign out, revalidates `/` |
 
@@ -923,11 +999,11 @@ Important operational note:
 Hosted Cortex is the external active bookmark search backend. Nyabag keeps Cortex separate from this repo and only calls it from server-side code.
 
 - `src/lib/cortex.ts` reads server-only `CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY`.
-- `src/lib/cortex-actions.ts` posts `nyabagBookmarkId`, `userId`, `url`, `title`, `summary`, and a non-null screenshot URL to Cortex `/ingest` only after bookmark processing is ready.
+- `src/lib/cortex-actions.ts` posts `nyabagBookmarkId`, `userId`, `workspaceId`, `url`, `title`, `summary`, and a non-null screenshot URL to Cortex `/ingest` only after bookmark processing is ready.
 - `deleteBookmark(id)` best-effort calls Cortex `DELETE /memories/bookmark/{nyabagBookmarkId}` with `CORTEX_INTERNAL_API_KEY` after the Supabase row is deleted, so stale Neon rows do not consume search result slots.
 - `bookmarks.cortex_status`, `cortex_error`, `cortex_memory_id`, and `cortex_ingested_at` track deferred ingest separately from legacy semantic search columns.
-- Active bookmark search calls internal-token-authenticated Cortex `/search` with `userId` and uses returned `nyabagBookmarkId` values as the authoritative ranking source.
-- Cortex filters by `userId` before ranking; returned Cortex IDs are also filtered through owner-scoped Supabase queries and then reordered to Cortex order.
+- Active bookmark search calls internal-token-authenticated Cortex `/search` with `userId` and `workspaceId` and uses returned `nyabagBookmarkId` values as the authoritative ranking source.
+- Cortex filters by `userId` before ranking; returned Cortex IDs are also filtered through active-workspace Supabase queries and then reordered to Cortex order.
 - If Cortex is missing or unavailable, bookmark creation still works and active search shows a Cortex-unavailable state instead of falling back to the retired local/Gemini search stack.
 - Nyabag no longer runs app-side Gemini bookmark enrichment. The retired `bookmark_ai_metadata`, `bookmark_visual_facts`, and bookmark `ai_*` fields are removed by migration; Cortex owns AI memory/search.
 - Legacy Supabase search objects such as lexical RPCs, embedding tables, vector indexes, and semantic status columns may remain until a future explicit cleanup migration.

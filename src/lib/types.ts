@@ -1,6 +1,35 @@
+export type WorkspaceRole = "owner" | "admin" | "member" | "viewer";
+
+export type Workspace = {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string;
+  icon: string | null;
+  color: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceMember = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: WorkspaceRole;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkspaceContext = {
+  workspaces: Workspace[];
+  activeWorkspace: Workspace;
+  activeWorkspaceRole: WorkspaceRole;
+};
+
 export type BookmarkFolder = {
   id: string;
   user_id: string;
+  workspace_id: string;
   parent_id: string | null;
   name: string;
   description: string;
@@ -20,6 +49,7 @@ export type BookmarkFolderTreeNode = BookmarkFolder & {
 export type Bookmark = {
   id: string;
   user_id: string;
+  workspace_id: string;
   url: string;
   title: string;
   tags: string[];
@@ -97,6 +127,7 @@ export type OnboardingStep = "welcome" | "preferences" | "telegram" | "complete"
 
 export type UserOnboarding = {
   user_id: string;
+  workspace_id: string;
   workspace_type: OnboardingWorkspaceType | "";
   primary_goal: OnboardingPrimaryGoal | "";
   focus_area: OnboardingFocusArea | "";
@@ -129,6 +160,7 @@ export type CortexBookmarkSearchPayload = {
   query: string;
   result_count: number;
   configured: boolean;
+  workspace_id?: string;
   message?: string;
 };
 
@@ -160,6 +192,7 @@ export type PendingMediaNote = {
 export type CanvasSection = {
   id: string;
   user_id: string;
+  workspace_id: string;
   label: string;
   x: number;
   y: number;
@@ -174,6 +207,7 @@ export type CanvasSection = {
 export type CanvasNote = {
   id: string;
   user_id: string;
+  workspace_id: string;
   section_id: string | null;
   type: NoteType;
   content: string;

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { CapturesPageClient } from "@/components/captures/CapturesPageClient";
 import { getCaptures } from "@/lib/captures/data";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkspaceContext } from "@/lib/workspaces";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,8 @@ export default async function CapturesPage() {
 
   if (!user) redirect("/login");
 
-  const captures = await getCaptures(supabase, user.id);
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const captures = await getCaptures(supabase, user.id, workspaceContext.activeWorkspace.id);
 
   return <CapturesPageClient captures={captures} />;
 }

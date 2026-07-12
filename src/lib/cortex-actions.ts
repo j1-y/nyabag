@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ingestBookmarkToCortex, isCortexConfigured } from "@/lib/cortex";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { ActionResult, CortexStatus } from "@/lib/types";
 
 export type CortexReadyIngestResult = {
@@ -15,6 +16,7 @@ export type CortexReadyIngestResult = {
 type ReadyBookmarkForCortex = {
   id: string;
   user_id: string;
+  workspace_id: string;
   url: string;
   title: string;
   summary: string | null;
@@ -38,6 +40,7 @@ async function markCortexStatus({
   supabase,
   bookmarkId,
   userId,
+  workspaceId,
   status,
   error,
   memoryId,
@@ -46,6 +49,7 @@ async function markCortexStatus({
   supabase: Awaited<ReturnType<typeof createClient>>;
   bookmarkId: string;
   userId: string;
+  workspaceId: string;
   status: CortexStatus;
   error?: string | null;
   memoryId?: string | null;
@@ -60,7 +64,8 @@ async function markCortexStatus({
       cortex_ingested_at: ingestedAt ?? null,
     })
     .eq("id", bookmarkId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId);
 }
 
 export async function ingestReadyBookmarksToCortex(
@@ -80,12 +85,15 @@ export async function ingestReadyBookmarksToCortex(
     } = await supabase.auth.getUser();
 
     if (!user) return { success: false, error: "Not authenticated" };
+    const workspaceContext = await getWorkspaceContext(supabase, user);
+    const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
     const safeLimit = clampLimit(limit);
     const { data, error } = await supabase
       .from("bookmarks")
-      .select("id,user_id,url,title,summary,screenshot_url,long_screenshot_url,cortex_status")
+      .select("id,user_id,workspace_id,url,title,summary,screenshot_url,long_screenshot_url,cortex_status")
       .eq("user_id", user.id)
+      .eq("workspace_id", activeWorkspaceId)
       .eq("processing_status", "ready")
       .in("cortex_status", INGESTIBLE_CORTEX_STATUSES)
       .or("long_screenshot_url.not.is.null,screenshot_url.not.is.null")
@@ -112,6 +120,7 @@ export async function ingestReadyBookmarksToCortex(
           supabase,
           bookmarkId: bookmark.id,
           userId: user.id,
+          workspaceId: activeWorkspaceId,
           status: "skipped",
           error: "Missing screenshot URL",
         });
@@ -126,6 +135,7 @@ export async function ingestReadyBookmarksToCortex(
         })
         .eq("id", bookmark.id)
         .eq("user_id", user.id)
+        .eq("workspace_id", activeWorkspaceId)
         .eq("processing_status", "ready")
         .in("cortex_status", INGESTIBLE_CORTEX_STATUSES)
         .select("id")
@@ -143,6 +153,7 @@ export async function ingestReadyBookmarksToCortex(
         await ingestBookmarkToCortex({
           nyabagBookmarkId: bookmark.id,
           userId: user.id,
+          workspaceId: activeWorkspaceId,
           url: bookmark.url,
           title: bookmark.title,
           summary: bookmark.summary,
@@ -152,6 +163,7 @@ export async function ingestReadyBookmarksToCortex(
           supabase,
           bookmarkId: bookmark.id,
           userId: user.id,
+          workspaceId: activeWorkspaceId,
           status: "skipped",
           error: errorMessage,
         });
@@ -162,6 +174,7 @@ export async function ingestReadyBookmarksToCortex(
       const response = await ingestBookmarkToCortex({
         nyabagBookmarkId: bookmark.id,
         userId: user.id,
+        workspaceId: activeWorkspaceId,
         url: bookmark.url,
         title: bookmark.title,
         summary: bookmark.summary,
@@ -174,6 +187,7 @@ export async function ingestReadyBookmarksToCortex(
           supabase,
           bookmarkId: bookmark.id,
           userId: user.id,
+          workspaceId: activeWorkspaceId,
           status: "failed",
           error: shortError("Cortex ingest failed"),
         });
@@ -184,6 +198,7 @@ export async function ingestReadyBookmarksToCortex(
         supabase,
         bookmarkId: bookmark.id,
         userId: user.id,
+        workspaceId: activeWorkspaceId,
         status: "ready",
         error: null,
         memoryId: response.memoryId ?? null,

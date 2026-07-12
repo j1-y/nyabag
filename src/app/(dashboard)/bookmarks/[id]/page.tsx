@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BookmarkDetailPage } from "@/components/bookmarks/BookmarkDetailPage";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { Bookmark } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,12 +15,14 @@ export default async function BookmarkPage({
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) notFound();
+  const workspaceContext = await getWorkspaceContext(supabase, user);
 
   const { data, error } = await supabase
     .from("bookmarks")
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", workspaceContext.activeWorkspace.id)
     .single();
 
   if (error || !data) notFound();

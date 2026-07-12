@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export type Capture = {
   id: string;
   user_id: string;
+  workspace_id: string;
   path: string;
   capture_url: string | null;
   page_url: string | null;
@@ -16,12 +17,14 @@ export type Capture = {
 
 export async function getCaptures(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  workspaceId: string
 ): Promise<Capture[]> {
   const { data, error } = await supabase
     .from("captures")
     .select("*")
     .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(200);
 

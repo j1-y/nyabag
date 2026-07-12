@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminServiceClient } from "@/lib/admin/service";
 import { createClient } from "@/lib/supabase/server";
+import { getWorkspaceContext } from "@/lib/workspaces";
 
 const CAPTURES_BUCKET = "captures";
 
@@ -20,6 +21,8 @@ export async function DELETE(
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const workspaceContext = await getWorkspaceContext(supabase, user);
+  const activeWorkspaceId = workspaceContext.activeWorkspace.id;
 
   const service = createAdminServiceClient();
   const { data: capture, error: fetchError } = await service
@@ -27,6 +30,7 @@ export async function DELETE(
     .select("id,path")
     .eq("id", id)
     .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId)
     .single();
 
   if (fetchError || !capture) {
@@ -47,7 +51,8 @@ export async function DELETE(
     .from("captures")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("workspace_id", activeWorkspaceId);
 
   if (deleteError) {
     return NextResponse.json({ error: deleteError.message }, { status: 500 });

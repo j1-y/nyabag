@@ -1,10 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { timeAsync } from "@/lib/perf";
+import { getWorkspaceContext } from "@/lib/workspaces";
 import type { CanvasNote, CanvasSection } from "@/lib/types";
 
 export const CANVAS_NOTE_COLUMNS = [
   "id",
   "user_id",
+  "workspace_id",
   "section_id",
   "type",
   "content",
@@ -27,6 +29,7 @@ export const CANVAS_NOTE_COLUMNS = [
 export const CANVAS_SECTION_COLUMNS = [
   "id",
   "user_id",
+  "workspace_id",
   "label",
   "x",
   "y",
@@ -41,9 +44,17 @@ export const CANVAS_SECTION_COLUMNS = [
 export async function getNotes(): Promise<CanvasNote[]> {
   return timeAsync("getNotes", async () => {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const workspaceContext = await getWorkspaceContext(supabase, user);
     const { data, error } = await supabase
       .from("canvas_notes")
       .select(CANVAS_NOTE_COLUMNS)
+      .eq("user_id", user.id)
+      .eq("workspace_id", workspaceContext.activeWorkspace.id)
       .order("z_index", { ascending: true });
 
     if (error || !data) return [];
@@ -77,9 +88,17 @@ export async function getNotes(): Promise<CanvasNote[]> {
 export async function getSections(): Promise<CanvasSection[]> {
   return timeAsync("getSections", async () => {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const workspaceContext = await getWorkspaceContext(supabase, user);
     const { data, error } = await supabase
       .from("canvas_sections")
       .select(CANVAS_SECTION_COLUMNS)
+      .eq("user_id", user.id)
+      .eq("workspace_id", workspaceContext.activeWorkspace.id)
       .order("z_index", { ascending: true });
 
     if (error || !data) return [];
