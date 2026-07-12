@@ -83,7 +83,7 @@ export function BookmarkSearchBar() {
         <input
           ref={inputRef}
           type="text"
-          placeholder='IconSearch keywords, vibe, layout, color, or pattern'
+          placeholder='Search icons by keyword, style, or vibe…'
           autoComplete="on"
           value={search}
           onChange={(e) => setSearch(e.target.value)}

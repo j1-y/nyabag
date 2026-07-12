@@ -65,7 +65,7 @@
 - Active dashboard searches must use Cortex via `searchCortexBookmarks()` in `src/lib/actions.ts`; do not reintroduce app-side lexical/Gemini/visual/fusion fallback for active queries.
 - Empty search still uses the loaded local bookmark list with tag and recent filters.
 - `CORTEX_API_URL` and `CORTEX_INTERNAL_API_KEY` are server-only and required for active search. If either is missing or broken, the active search UI shows a Cortex-unavailable state.
-- Cortex validates the internal token, scopes retrieval by `userId`, applies evidence gating for specific visual terms, and returns ranked `nyabagBookmarkId` values. Nyabag must still owner-filter those IDs through Supabase and return bookmark rows in Cortex order.
+- Cortex validates the internal token, scopes retrieval by `userId` and `workspaceId` when present, applies evidence gating for specific visual terms, and returns ranked `nyabagBookmarkId` values. Nyabag must still filter those IDs through Supabase and return bookmark rows in Cortex order.
 - Cortex ingest/search/delete may receive `workspaceId` when supported. Regardless of Cortex support, Nyabag filters returned bookmark IDs through the active workspace before rendering.
 - `bookmarks.cortex_status` tracks deferred ingest separately from legacy `semantic_status`.
 - `CORTEX_INTERNAL_API_KEY` is also required for destructive Cortex cleanup endpoints.
