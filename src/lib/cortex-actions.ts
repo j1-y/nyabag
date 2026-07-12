@@ -48,6 +48,7 @@ async function markCortexStatus({
   tags,
   palette,
   fonts,
+  summary,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   bookmarkId: string;
