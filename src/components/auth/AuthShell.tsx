@@ -27,20 +27,15 @@ export function AuthShell({
         <div className="auth-visual" aria-hidden="true">
           <Image
             className="auth-visual-image"
-            src="/assets/auth-visual.webp"
+            src="/assets/BG-1200-1800-OP.png"
             alt=""
-            width={800}
-            height={1000}
-            priority
+            width={1200}
+            height={1800}
+            preload
             sizes="(max-width: 720px) 100vw, 44vw"
           />
           <div className="auth-visual-wash" />
-          <div className="auth-visual-brand">
-            <HugeIcon icon={IconSparkles} size={24} />
-            <span>Nyabag</span>
-          </div>
           <div className="auth-visual-copy">
-            <span className="auth-visual-kicker">Your visual memory, always close.</span>
             <h2>{visualTitle}</h2>
             <p>{visualCopy}</p>
           </div>
@@ -57,7 +52,6 @@ export function AuthShell({
               priority
             />
             <div className="auth-heading-block">
-              <span className="auth-eyebrow">{eyebrow}</span>
               <h1 id="auth-heading" className="auth-title">
                 {title}
               </h1>
