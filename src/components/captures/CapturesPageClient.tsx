@@ -5,7 +5,7 @@ import { IconAdd, IconArrowLeft, IconArrowRight, IconArrowUpRight, IconCamera, I
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { IconSearch, IconList, IconArrowDown } from "@/components/ui/icons";
+import { IconSearch } from "@/components/ui/icons";
 
 export type CaptureView = {
   id: string;
@@ -416,7 +416,7 @@ function MasonryGrid({
             </div>
           )}
           <div className="masonry-hover" aria-hidden="true">
-            <HugeIcon icon={IconArrowUpRight} size={18} />
+            <HugeIcon icon={IconArrowUpRight} size={16} />
           </div>
         </div>
       ))}
@@ -427,44 +427,28 @@ function MasonryGrid({
 export function CapturesPageClient({ captures: initialCaptures }: CapturesPageClientProps) {
   const [captures, setCaptures] = useState(initialCaptures);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterSource, setFilterSource] = useState("all");
-  const [sortOrder, setSortOrder] = useState("newest");
 
   const filteredCaptures = useMemo(() => {
     let result = [...captures];
 
-    // Filter
-    if (filterSource !== "all") {
-      result = result.filter(c => {
-        if (filterSource === "extension-scroll") return c.source === "extension-scroll";
-        if (filterSource === "extension-visible") return c.source === "extension-visible";
-        if (filterSource === "extension") return c.source === "extension" || !c.source;
-        return true;
-      });
-    }
-
-    // Search
+    // Search by title or URL
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      result = result.filter(c => (c.page_title || "").toLowerCase().includes(q) || (c.page_url || "").toLowerCase().includes(q));
+      result = result.filter(
+        (c) =>
+          (c.page_title || "").toLowerCase().includes(q) ||
+          (c.page_url || "").toLowerCase().includes(q)
+      );
     }
 
-    // Sort
-    result.sort((a, b) => {
-      if (sortOrder === "newest") {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      } else if (sortOrder === "oldest") {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      } else if (sortOrder === "size-desc") {
-        return (b.compressed_size || 0) - (a.compressed_size || 0);
-      }
-      return 0;
-    });
+    // Default sort: newest first
+    result.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
     return result;
-  }, [captures, searchQuery, filterSource, sortOrder]);
+  }, [captures, searchQuery]);
 
   const handleDelete = useCallback(
     async (id: string) => {
@@ -484,7 +468,7 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
       <main className="captures-page">
         <div className="captures-empty">
           <div className="captures-empty__icon" aria-hidden="true">
-            <HugeIcon icon={IconCamera} size={18} />
+            <HugeIcon icon={IconCamera} size={20} />
           </div>
           <h2>No captures yet</h2>
           <p>Use the Nyabag browser extension to capture screenshots. They&apos;ll appear here.</p>
@@ -502,43 +486,24 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
         <div className="captures-header__left">
           <div className="captures-title-row">
             <h1 className="captures-heading">Captures</h1>
-            <span className="captures-count-badge">
-              {filteredCaptures.length} {filteredCaptures.length === 1 ? "capture" : "captures"}
+            <span className="captures-count-inline">
+              {filteredCaptures.length}
             </span>
           </div>
-          <p className="captures-subtitle">Manage and organize screenshots captured via the browser extension.</p>
         </div>
-      </div>
 
-      <div className="captures-toolbar">
-        <div className="captures-toolbar__search">
-          <HugeIcon icon={IconSearch} size={16} className="captures-toolbar__search-icon" />
-          <input
-            type="text"
-            placeholder="Search captures..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        
-        <div className="captures-toolbar__controls">
-          <div className="captures-toolbar__select-wrapper">
-            <HugeIcon icon={IconList} size={16} />
-            <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
-              <option value="all">All sources</option>
-              <option value="extension-scroll">Full-page</option>
-              <option value="extension-visible">Visible tab</option>
-              <option value="extension">Extension selection</option>
-            </select>
-          </div>
-          
-          <div className="captures-toolbar__select-wrapper">
-            <HugeIcon icon={IconArrowDown} size={16} />
-            <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-              <option value="size-desc">Largest size</option>
-            </select>
+        <div className="captures-toolbar">
+          <div className="captures-toolbar__search">
+            <HugeIcon icon={IconSearch} size={15} className="captures-toolbar__search-icon" />
+            <input
+              id="captures-search"
+              type="text"
+              placeholder="Search captures…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
+            />
           </div>
         </div>
       </div>
@@ -547,9 +512,13 @@ export function CapturesPageClient({ captures: initialCaptures }: CapturesPageCl
         <MasonryGrid captures={filteredCaptures} onOpen={setLightboxIndex} />
       ) : (
         <div className="captures-empty captures-empty--filtered">
-          <p>No captures match your filters.</p>
-          <button type="button" onClick={() => { setSearchQuery(""); setFilterSource("all"); }} className="captures-empty__link">
-            Clear filters
+          <p>No captures match your search.</p>
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="captures-empty__link"
+          >
+            Clear search
           </button>
         </div>
       )}

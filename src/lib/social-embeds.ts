@@ -56,7 +56,17 @@ export function parseSocialEmbed(raw: string): SocialEmbed | null {
   }
 
   if (hostname === "linkedin.com" || hostname.endsWith(".linkedin.com")) {
-    return { provider: "linkedin", url: href };
+    let finalUrl = href;
+    const urnMatch = href.match(/urn:li:(activity|share|ugcPost):\d+/);
+    if (urnMatch) {
+      finalUrl = "https://www.linkedin.com/embed/feed/update/" + urnMatch[0];
+    } else {
+      const activityMatch = href.match(/activity-(\d+)/);
+      if (activityMatch) {
+        finalUrl = "https://www.linkedin.com/embed/feed/update/urn:li:activity:" + activityMatch[1];
+      }
+    }
+    return { provider: "linkedin", url: finalUrl };
   }
 
   if (hostname === "instagram.com" || hostname.endsWith(".instagram.com")) {

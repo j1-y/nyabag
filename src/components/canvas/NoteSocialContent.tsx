@@ -118,7 +118,17 @@ export function NoteSocialContent({ note, isSelected }: { note: CanvasNote; isSe
       <div className="social-note-frame" ref={containerRef} style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center" }}>
         {embed!.provider === "x" && <XEmbed url={embedUrl} width={550} />}
         {embed!.provider === "facebook" && <FacebookEmbed url={embedUrl} width={550} />}
-        {embed!.provider === "linkedin" && <LinkedInEmbed url={embedUrl} width={550} />}
+        {embed!.provider === "linkedin" && (
+          <iframe
+            src={embedUrl}
+            width={550}
+            height={550}
+            style={{ borderRadius: 8, overflow: "hidden" }}
+            frameBorder="0"
+            allowFullScreen
+            title="LinkedIn post"
+          />
+        )}
         {embed!.provider === "instagram" && <InstagramEmbed url={embedUrl} width={400} />}
         {embed!.provider === "tiktok" && <TikTokEmbed url={embedUrl} width={325} />}
         {embed!.provider === "pinterest" && <PinterestEmbed url={embedUrl} width={345} />}
