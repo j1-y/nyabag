@@ -1,6 +1,6 @@
 # Nyabag Technical Documentation
 
-Last updated: 2026-07-12
+Last updated: 2026-07-13
 
 Nyabag is a desktop-first bookmark and notes workspace built with Next.js, Supabase, and React. It combines personal workspaces, a visual bookmark moodboard, and a FigJam-style infinite canvas for notes, links, media, social embeds, and grouped sections. This repo is now app-only for `app.nyabag.com`: the authenticated product lives at `/`, while marketing/editorial pages have been removed. This document is intended for future developers working on the codebase, deployment, debugging, and feature expansion.
 
@@ -146,6 +146,14 @@ The app is currently desktop-first. Mobile authenticated users see a small captu
 - Polls `getOnboardingBookmarkPreview(bookmarkId)` after creation and keeps the creating state active until the normal top-viewport `screenshot_url` exists; processor failures before that normal screenshot show retry/skip actions instead of a fake success state.
 - Users can explicitly skip first bookmark creation, which calls `completeOnboarding()` and enters the dashboard.
 - Does not require workspace type, primary goal, focus area, or Telegram connection.
+
+### Authentication pages
+
+- `/login` and `/signup` share a responsive split-panel presentation through `src/components/auth/AuthShell.tsx` while keeping their existing Supabase client auth behavior.
+- Signup intentionally requests only email and password. Profile name, phone, and avatar fields have schema defaults and remain part of profile setup rather than account creation.
+- Both pages preserve sanitized encoded `next` values when linking to each other and after successful authentication, including the Chrome-extension web-session start flow.
+- Password reveal controls, loading feedback, accessible error alerts, and a separate email-confirmation success state provide the interactive feedback layer.
+- Auth motion respects `prefers-reduced-motion`; visual styling uses shared Nyabag tokens and primitives.
 
 ### Mobile URL Capture
 

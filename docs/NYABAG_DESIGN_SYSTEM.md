@@ -2,7 +2,15 @@
 
 Nyabag app UI should feel premium, engineered, compact, and consistent. New product work must start from the shared primitives in `src/components/ui` and the tokens in `src/app/globals.css`.
 
-This document applies to the product app: dashboard, bookmarks, Canvas, dialogs, app layout, profile, admin, legal support pages, and loading states.
+This document applies to the product app: dashboard, bookmarks, Canvas, dialogs, app layout, profile, authentication, admin, legal support pages, and loading states.
+
+## Authentication pattern
+
+- `/login` and `/signup` share `src/components/auth/AuthShell.tsx` and the auth section in `globals.css`.
+- Desktop auth uses a 44/56 visual-and-form split inside one 10px shell; mobile stacks a compact visual header above the form.
+- Auth forms use the shared `Button`, `Input`, `Field`, `Alert`, and Hugeicons primitives. Do not add provider buttons, recovery links, or extra profile fields until working product flows require them.
+- Preserve safe encoded `next` values when linking between login and signup so extension web-session handoffs resume correctly.
+- Motion is entrance and feedback only, uses the onboarding-style ease-out curve, and must stop under `prefers-reduced-motion`.
 
 ## Foundations
 

@@ -19,6 +19,8 @@ export {
   Database01Icon as IconDatabase,
   Delete02Icon as IconDelete,
   Download01Icon as IconDownload,
+  EyeIcon as IconEye,
+  EyeOffIcon as IconEyeOff,
   File01Icon as IconFile,
   Folder01Icon as IconFolder,
   FolderAddIcon as IconFolderAdd,

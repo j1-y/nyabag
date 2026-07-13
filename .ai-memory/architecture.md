@@ -4,7 +4,7 @@
 
 - Root app layout: `src/app/layout.tsx`
 - App-only deployment for `app.nyabag.com`; no marketing, blog, about, or contact routes are present.
-- Auth flows: `src/app/login/page.tsx`, `src/app/signup/page.tsx`, `src/app/onboarding/page.tsx`
+- Auth flows: `src/app/login/page.tsx` and `src/app/signup/page.tsx` share `src/components/auth/AuthShell.tsx`, preserve safe internal `next` handoffs, and use Supabase email/password auth; `src/app/onboarding/page.tsx` remains the authenticated first-run flow.
 - Legal support routes: `src/app/privacy/page.tsx`, `src/app/terms/page.tsx`
 - Dashboard group: `src/app/(dashboard)/layout.tsx`
 

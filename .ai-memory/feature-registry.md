@@ -72,6 +72,14 @@
 - Dependencies: Supabase auth, onboarding table/state, bookmark creation pipeline, bookmark preview processing status, retry bookmark processing action, favicon route
 - Status: Active
 
+## Authentication
+
+- Feature: Public sign-in and signup
+- Description: Responsive split-panel auth experience aligned with onboarding and Nyabag's design system. Both routes use Supabase email/password auth, preserve safe encoded `next` handoffs for dashboard and Chrome-extension flows, expose password visibility controls, and distinguish signup email-confirmation success from errors.
+- Key Files: `src/app/login/page.tsx`, `src/app/signup/page.tsx`, `src/components/auth/AuthShell.tsx`, `src/app/globals.css`, `src/lib/security/redirect-safety.ts`
+- Dependencies: Supabase auth, public logo/auth visual assets, shared Button/Input/Field/Alert/HugeIcon primitives
+- Status: Active
+
 ## Admin
 
 - Feature: Admin console
