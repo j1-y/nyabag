@@ -4489,6 +4489,13 @@
   margin-top: 2px;
 }
 
+.detail-note-card__mark {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin-top: 2px;
+}
+
 .detail-note-card p {
   color: var(--text2);
   font-size: 13px;
@@ -6539,11 +6546,25 @@
   line-height: 1.2;
 }
 
-.rich-text-note--frame .ProseMirror {
+.rich-text-note--frame[data-text-sizing-mode="auto_width"],
+.rich-text-note--frame[data-text-sizing-mode="auto_height"] {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+.rich-text-note--frame[data-text-sizing-mode="auto_width"] .ProseMirror {
   display: inline-block;
-  min-height: auto;
   min-width: 1ch;
   width: max-content;
+  max-width: 1192px;
+  white-space: pre-wrap;
+}
+
+.rich-text-note--frame[data-text-sizing-mode="auto_height"] .ProseMirror,
+.rich-text-note--frame[data-text-sizing-mode="fixed"] .ProseMirror {
+  display: block;
+  width: 100%;
   max-width: 100%;
   white-space: pre-wrap;
 }
@@ -6553,6 +6574,10 @@
   outline: none;
   color: inherit;
   caret-color: var(--sticky-note-ink, var(--text));
+}
+
+.rich-text-note.rich-text-note--frame .ProseMirror {
+  min-height: 0;
 }
 
 .rich-text-note .ProseMirror> :first-child {

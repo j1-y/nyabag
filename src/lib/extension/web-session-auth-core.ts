@@ -4,6 +4,9 @@ const CODE_TTL_SECONDS = 5 * 60;
 const CHROME_EXTENSION_ID_PATTERN = /^[a-p]{32}$/;
 const EXCHANGE_CODE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const STATE_PATTERN = /^[A-Za-z0-9._~-]{16,256}$/;
+const OFFICIAL_CHROME_EXTENSION_IDS = [
+  "ljgccanoebeimhommihhmkhpdcdmemie",
+] as const;
 
 type ValidationResult =
   | { success: true; value: string }
@@ -22,26 +25,20 @@ export function getAllowedChromeExtensionIds():
   | { success: false; status: number; error: string } {
   const configured = process.env.NYABAG_CHROME_EXTENSION_IDS;
 
-  if (!configured?.trim()) {
-    return {
-      success: false,
-      status: 500,
-      error: "NYABAG_CHROME_EXTENSION_IDS is not configured",
-    };
-  }
-
-  const ids = configured
+  const configuredIds = (configured ?? "")
     .split(",")
     .map((id) => id.trim().toLowerCase())
     .filter(Boolean);
 
-  if (!ids.length || ids.some((id) => !CHROME_EXTENSION_ID_PATTERN.test(id))) {
+  if (configuredIds.some((id) => !CHROME_EXTENSION_ID_PATTERN.test(id))) {
     return {
       success: false,
       status: 500,
       error: "NYABAG_CHROME_EXTENSION_IDS is invalid",
     };
   }
+
+  const ids = Array.from(new Set([...OFFICIAL_CHROME_EXTENSION_IDS, ...configuredIds]));
 
   return { success: true, value: ids };
 }

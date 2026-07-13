@@ -178,6 +178,7 @@ export type UserProfile = {
 export type NoteType = "text" | "text_frame" | "link" | "image" | "video" | "social";
 export type NoteMediaSource = "url" | "upload";
 export type NoteContentFormat = "plain" | "rich";
+export type TextSizingMode = "auto_width" | "auto_height" | "fixed";
 export type CanvasToolMode = "select" | "pan";
 
 export type PendingMediaNote = {
@@ -213,6 +214,7 @@ export type CanvasNote = {
   content: string;
   content_json?: unknown | null;
   content_format?: NoteContentFormat | string;
+  text_sizing_mode: TextSizingMode;
   media_source: NoteMediaSource | null;
   media_path: string | null;
   media_mime: string | null;

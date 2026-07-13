@@ -40,6 +40,7 @@ import type {
   NoteMediaSource,
   NoteType,
   PendingMediaNote,
+  TextSizingMode,
 } from "@/lib/types";
 import { useCanvasStore } from "@/features/canvas/store/useCanvasStore";
 
@@ -106,9 +107,9 @@ interface NotesCtx {
   removeMedia: (id: string) => Promise<ActionResult<CanvasNote>>;
   setNotePosition: (id: string, x: number, y: number) => void;
   setNotePositions: (positions: Array<{ id: string; x: number; y: number }>) => void;
-  setNoteSize: (id: string, width: number, height: number) => void;
+  setNoteSize: (id: string, width: number, height: number, textSizingMode?: TextSizingMode) => void;
   commitPosition: (id: string, x: number, y: number) => Promise<void>;
-  commitSize: (id: string, width: number, height: number) => Promise<void>;
+  commitSize: (id: string, width: number, height: number, textSizingMode?: TextSizingMode) => Promise<void>;
   bringToFront: (id: string) => void;
   wrapSelectionInSection: (label: string) => Promise<ActionResult<CanvasSection>>;
   setSectionPosition: (id: string, x: number, y: number) => void;
@@ -211,6 +212,7 @@ export function NotesProvider({
             content: "",
             content_json: null,
             content_format: "plain",
+            text_sizing_mode: type === "text_frame" ? "auto_width" : "fixed",
             media_source: null,
             media_path: null,
             media_mime: null,
@@ -478,7 +480,8 @@ export function NotesProvider({
           previous.color,
           previous.width,
           previous.height,
-          previous.z_index
+          previous.z_index,
+          previous.text_sizing_mode
         );
 
         if (result.success) {
@@ -581,8 +584,13 @@ export function NotesProvider({
     );
   }, []);
 
-  const setNoteSize = useCallback((id: string, width: number, height: number) => {
-    setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, width, height } : n)));
+  const setNoteSize = useCallback((id: string, width: number, height: number, textSizingMode?: TextSizingMode) => {
+    setNotes((prev) => prev.map((n) => (n.id === id ? {
+      ...n,
+      width,
+      height,
+      ...(textSizingMode ? { text_sizing_mode: textSizingMode } : {}),
+    } : n)));
   }, []);
 
   const commitPosition = useCallback(async (id: string, x: number, y: number) => {
@@ -591,9 +599,9 @@ export function NotesProvider({
     if (!result.success) console.error("Failed to update note position:", result.error);
   }, []);
 
-  const commitSize = useCallback(async (id: string, width: number, height: number) => {
+  const commitSize = useCallback(async (id: string, width: number, height: number, textSizingMode?: TextSizingMode) => {
     if (isDraftNoteId(id)) return;
-    const result = await updateNoteSize(id, width, height);
+    const result = await updateNoteSize(id, width, height, textSizingMode);
     if (!result.success) console.error("Failed to update note size:", result.error);
   }, []);
 

@@ -27,7 +27,7 @@
 ## Canvas
 
 - Feature: Infinite canvas
-- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, drag-resize interactions, and sidebar-only app navigation. Canvas notes, sections, uploads, section wrapping, and note membership updates are scoped to the active workspace.
+- Description: Desktop-first visual workspace for notes, media, links, embeds, sections, drag-resize interactions, and sidebar-only app navigation. Text frames use persisted Figma-style auto-width, auto-height, and fixed sizing modes. Canvas notes, sections, uploads, section wrapping, and note membership updates are scoped to the active workspace.
 - Key Files: `src/app/(dashboard)/canvas/page.tsx`, `src/components/canvas/*`, `src/hooks/useNotes.tsx`, `src/lib/canvas-actions.ts`, `src/lib/canvas-data.ts`, `src/lib/social-embeds.ts`, `supabase/schema.sql`
 - Dependencies: Supabase auth, storage, signed URLs, route-level loading UI
 - Status: Active
@@ -101,7 +101,7 @@
 - Feature: Browser extension API
 - Description: API routes that support browser-extension password auth, web-session handoff auth, refresh, user profile lookup, workspace/collection lookup, unified bookmark/screenshot capture through `/captures`, upload, and commit flows. Capture endpoints may accept optional `workspaceId`, validate membership server-side, and fall back safely to the user's default workspace. Sessions are API-origin-bound and validated through `/me`, and bearer-auth failures expose stable safe diagnostic codes.
 - Key Files: `src/app/api/extension/*`, `src/lib/extension/*`, `supabase/schema.sql`
-- Dependencies: Supabase auth, service-role-only one-time auth code storage, `NYABAG_CHROME_EXTENSION_IDS`, CORS rules, capture storage, extension client state
+- Dependencies: Supabase auth, service-role-only one-time auth code storage, pinned official Web Store extension id plus optional `NYABAG_CHROME_EXTENSION_IDS` development ids, CORS rules, capture storage, extension client state
 - Status: Active
 
 ## Captures

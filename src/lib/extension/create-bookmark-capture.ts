@@ -8,6 +8,7 @@ import { getDesignData, getDomain } from "@/lib/data";
 import { triggerBookmarkProcessor } from "@/lib/bookmarks/trigger-processor";
 import { extensionCors } from "@/lib/extension/cors";
 import { resolveWorkspaceForUser } from "@/lib/workspaces";
+import { EXTENSION_CAPTURE_ATTRIBUTION } from "@/lib/bookmarks/format-note";
 
 type ExtensionCaptureType =
   | "page"
@@ -70,17 +71,15 @@ function getTitleForCapture(payload: ExtensionBookmarkCapturePayload, safeTarget
 }
 
 function getNoteForCapture(payload: ExtensionBookmarkCapturePayload, safePageUrl?: string) {
-  const source = payload.source || "chrome-extension";
-
   if (payload.type === "selection") {
     const text = truncate(payload.text?.trim() ?? "", 1800);
-    return [text, "", safePageUrl ? `Source: ${safePageUrl}` : "", `Captured via ${source}`]
+    return [text, "", safePageUrl ? `Source: ${safePageUrl}` : "", EXTENSION_CAPTURE_ATTRIBUTION]
       .filter(Boolean)
       .join("\n");
   }
 
   if (payload.type === "image") {
-    return [safePageUrl ? `Source page: ${safePageUrl}` : "", `Captured via ${source}`]
+    return [safePageUrl ? `Source page: ${safePageUrl}` : "", EXTENSION_CAPTURE_ATTRIBUTION]
       .filter(Boolean)
       .join("\n");
   }
@@ -90,13 +89,13 @@ function getNoteForCapture(payload: ExtensionBookmarkCapturePayload, safePageUrl
       "Visible tab screenshot capture requested from Chrome extension.",
       "MVP note: the source page is saved and normal preview processing is queued.",
       safePageUrl ? `Source page: ${safePageUrl}` : "",
-      `Captured via ${source}`,
+      EXTENSION_CAPTURE_ATTRIBUTION,
     ]
       .filter(Boolean)
       .join("\n");
   }
 
-  return `Captured via ${source}`;
+  return EXTENSION_CAPTURE_ATTRIBUTION;
 }
 
 async function enqueueBookmarkProcessingJob({

@@ -1811,6 +1811,7 @@ CREATE TABLE IF NOT EXISTS canvas_notes (
   media_name    TEXT,
   content_json  JSONB,
   content_format TEXT       NOT NULL DEFAULT 'plain',
+  text_sizing_mode TEXT     NOT NULL DEFAULT 'fixed',
   x             REAL        NOT NULL DEFAULT 100,
   y             REAL        NOT NULL DEFAULT 100,
   width         REAL        NOT NULL DEFAULT 240,
@@ -1829,13 +1830,15 @@ ALTER TABLE canvas_notes
   ADD COLUMN IF NOT EXISTS media_mime TEXT,
   ADD COLUMN IF NOT EXISTS media_name TEXT,
   ADD COLUMN IF NOT EXISTS content_json JSONB,
-  ADD COLUMN IF NOT EXISTS content_format TEXT NOT NULL DEFAULT 'plain';
+  ADD COLUMN IF NOT EXISTS content_format TEXT NOT NULL DEFAULT 'plain',
+  ADD COLUMN IF NOT EXISTS text_sizing_mode TEXT NOT NULL DEFAULT 'fixed';
 
 ALTER TABLE canvas_notes
   DROP CONSTRAINT IF EXISTS canvas_notes_section_id_fkey,
   DROP CONSTRAINT IF EXISTS canvas_notes_type_check,
   DROP CONSTRAINT IF EXISTS canvas_notes_content_check,
   DROP CONSTRAINT IF EXISTS canvas_notes_content_format_check,
+  DROP CONSTRAINT IF EXISTS canvas_notes_text_sizing_mode_check,
   DROP CONSTRAINT IF EXISTS canvas_notes_media_source_check,
   DROP CONSTRAINT IF EXISTS canvas_notes_media_path_check,
   DROP CONSTRAINT IF EXISTS canvas_notes_media_mime_check,
@@ -1844,6 +1847,7 @@ ALTER TABLE canvas_notes
   ADD CONSTRAINT canvas_notes_type_check CHECK (type IN ('text','text_frame','link','image','video','social')),
   ADD CONSTRAINT canvas_notes_content_check CHECK (char_length(content) <= 12000),
   ADD CONSTRAINT canvas_notes_content_format_check CHECK (content_format IN ('plain', 'rich')),
+  ADD CONSTRAINT canvas_notes_text_sizing_mode_check CHECK (text_sizing_mode IN ('auto_width', 'auto_height', 'fixed')),
   ADD CONSTRAINT canvas_notes_media_source_check CHECK (media_source IS NULL OR media_source IN ('url','upload')),
   ADD CONSTRAINT canvas_notes_media_path_check CHECK (media_path IS NULL OR char_length(media_path) <= 1024),
   ADD CONSTRAINT canvas_notes_media_mime_check CHECK (media_mime IS NULL OR char_length(media_mime) <= 255),

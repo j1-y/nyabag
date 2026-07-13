@@ -20,6 +20,7 @@ import {
 import type {
   ActionResult,
   CanvasNote,
+  TextSizingMode,
   CanvasSection,
   CanvasSnapshot,
   DeleteNotesResult,
@@ -245,6 +246,7 @@ export async function createNote(
     const parsed = noteCreateSchema.safeParse({
       type,
       content: isSocial ? SOCIAL_NOTE_PREFIX : "",
+      text_sizing_mode: type === "text_frame" ? "auto_width" : "fixed",
       media_source: null,
       media_path: null,
       media_mime: null,
@@ -300,7 +302,8 @@ export async function createTextNoteWithRichContent(
   color: string,
   width: number,
   height: number,
-  zIndex?: number
+  zIndex?: number,
+  textSizingMode: TextSizingMode = type === "text_frame" ? "auto_width" : "fixed"
 ): Promise<ActionResult<CanvasNote>> {
   return timeAsync("createTextNoteWithRichContent", async () => {
     const supabase = await createClient();
@@ -334,6 +337,7 @@ export async function createTextNoteWithRichContent(
       content,
       content_json: contentJson,
       content_format: "rich",
+      text_sizing_mode: textSizingMode,
       media_source: null,
       media_path: null,
       media_mime: null,
@@ -1013,20 +1017,35 @@ export async function updateNotePosition(
 export async function updateNoteSize(
   id: string,
   width: number,
-  height: number
+  height: number,
+  textSizingMode?: TextSizingMode
 ): Promise<ActionResult> {
   const supabase = await createClient();
   const user = await getUser(supabase);
   if (!user) return { success: false, error: "Not authenticated" };
 
-  const parsed = noteSizeSchema.safeParse({ id, width, height });
+  const parsed = noteSizeSchema.safeParse({ id, width, height, text_sizing_mode: textSizingMode });
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0].message };
   }
 
+  const oldNote = await getOwnedNote(supabase, user.id, user.activeWorkspaceId, id);
+  if (!oldNote) return { success: false, error: "Note not found" };
+  if (oldNote.type !== "text_frame" && parsed.data.height < 80) {
+    return { success: false, error: "Note height must be at least 80 pixels" };
+  }
+
+  const nextTextSizingMode = oldNote.type === "text_frame"
+    ? parsed.data.text_sizing_mode ?? oldNote.text_sizing_mode ?? "fixed"
+    : "fixed";
+
   const { error } = await supabase
     .from("canvas_notes")
-    .update({ width, height })
+    .update({
+      width: parsed.data.width,
+      height: parsed.data.height,
+      text_sizing_mode: nextTextSizingMode,
+    })
     .eq("id", id)
     .eq("user_id", user.id)
     .eq("workspace_id", user.activeWorkspaceId);

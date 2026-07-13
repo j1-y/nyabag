@@ -32,7 +32,7 @@ const EMPTY_DOC: JSONContent = {
 };
 const MAX_AUTO_HEIGHT = 900;
 const MIN_FRAME_WIDTH = 100;
-const MIN_FRAME_HEIGHT = 80;
+const MIN_FRAME_HEIGHT = 38;
 const MAX_FRAME_WIDTH = 1200;
 const MAX_FRAME_HEIGHT = 900;
 const FRAME_PAD_X = 8;
@@ -116,6 +116,7 @@ export const NoteTextContent = forwardRef<
 >(function NoteTextContent({ note, isSelected }, ref) {
   const { updateRichTextContent, setNoteSize, commitSize } = useNotes();
   const isTextFrame = note.type === "text_frame";
+  const textSizingMode = note.text_sizing_mode ?? (isTextFrame ? "auto_width" : "fixed");
   const initialContent = useMemo(() => getInitialContent(note), [note]);
   const savedPlainRef = useRef(note.content);
   const savedJsonRef = useRef<unknown>(initialContent);
@@ -187,7 +188,7 @@ export const NoteTextContent = forwardRef<
   }, [commitSize, isTextFrame, note.id, setNoteSize]);
 
   const fitFrameToContent = useCallback(() => {
-    if (!isTextFrame) return;
+    if (!isTextFrame || textSizingMode === "fixed") return;
     if (autoHeightFrameRef.current !== null) return;
     autoHeightFrameRef.current = window.requestAnimationFrame(() => {
       autoHeightFrameRef.current = null;
@@ -195,12 +196,13 @@ export const NoteTextContent = forwardRef<
       const editorElement = container?.querySelector<HTMLElement>(".ProseMirror");
       if (!container || !editorElement) return;
 
-      const contentRect = editorElement.getBoundingClientRect();
-      const nextWidth = clamp(
-        Math.ceil(contentRect.width + FRAME_PAD_X),
-        MIN_FRAME_WIDTH,
-        MAX_FRAME_WIDTH
-      );
+      const nextWidth = textSizingMode === "auto_width"
+        ? clamp(
+            Math.ceil(editorElement.scrollWidth + FRAME_PAD_X),
+            MIN_FRAME_WIDTH,
+            MAX_FRAME_WIDTH
+          )
+        : latestSizeRef.current.width;
       const nextHeight = clamp(
         Math.ceil(editorElement.scrollHeight + FRAME_PAD_Y),
         MIN_FRAME_HEIGHT,
@@ -213,17 +215,17 @@ export const NoteTextContent = forwardRef<
       }
 
       latestSizeRef.current = { width: nextWidth, height: nextHeight };
-      setNoteSize(note.id, nextWidth, nextHeight);
+      setNoteSize(note.id, nextWidth, nextHeight, textSizingMode);
 
       if (autoHeightCommitRef.current !== null) {
         window.clearTimeout(autoHeightCommitRef.current);
       }
       autoHeightCommitRef.current = window.setTimeout(() => {
         autoHeightCommitRef.current = null;
-        void commitSize(note.id, nextWidth, nextHeight);
+        void commitSize(note.id, nextWidth, nextHeight, textSizingMode);
       }, 250);
     });
-  }, [commitSize, isTextFrame, note.id, setNoteSize]);
+  }, [commitSize, isTextFrame, note.id, setNoteSize, textSizingMode]);
 
   const editor = useEditor({
     extensions: [
@@ -274,7 +276,7 @@ export const NoteTextContent = forwardRef<
     if (!isSelected) saveEditor();
     growToFitContent();
     fitFrameToContent();
-  }, [editor, fitFrameToContent, growToFitContent, isSelected, saveEditor]);
+  }, [editor, fitFrameToContent, growToFitContent, isSelected, note.width, saveEditor]);
 
   useEffect(() => {
     return () => {
@@ -378,6 +380,7 @@ export const NoteTextContent = forwardRef<
     <div
       ref={containerRef}
       className={`rich-text-note${isTextFrame ? " rich-text-note--frame" : ""}`}
+      data-text-sizing-mode={isTextFrame ? textSizingMode : undefined}
       onPointerDown={(e) => isSelected && e.stopPropagation()}
     >
       <EditorContent editor={editor} />

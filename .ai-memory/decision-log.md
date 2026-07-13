@@ -100,6 +100,14 @@
 
 - Reason: When a user is not already authenticated, the extension auth start route must send them through the normal Nyabag login/signup screens without losing the original `/api/extension/auth/start?...` request, otherwise the web-session handoff can never complete after auth.
 
+## Decision: The official Web Store extension id is pinned server-side
+
+- Reason: The production Chrome identity callback host is stable and public, while environment-only allowlists can drift between locally loaded and Web Store builds. Nyabag always allows the official id `ljgccanoebeimhommihhmkhpdcdmemie`, keeps optional development ids in `NYABAG_CHROME_EXTENSION_IDS`, and still requires the exact HTTPS host plus `/nyabag-auth` path.
+
 ## Decision: Workspace id is the content boundary
 
 - Reason: V1 workspaces are same-user personal containers, so existing `user_id` columns remain creator/owner metadata while `workspace_id` scopes bookmarks, folders, canvas notes and sections, captures, onboarding state, Cortex records, and Oracle jobs. Membership remains owner-only in the UI for now, with team, invite, delete, billing, sharing, and collaboration semantics deferred.
+
+## Decision: Text frames persist Figma-style sizing modes
+
+- Reason: Width and height alone cannot distinguish content-hugging text from intentionally fixed boxes. Persisting `auto_width`, `auto_height`, or `fixed` keeps typing, manual resize transitions, and reload behavior predictable without applying text-frame minimums to other canvas note types.

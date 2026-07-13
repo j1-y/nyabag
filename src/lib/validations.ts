@@ -125,6 +125,7 @@ export const noteCreateSchema = z.object({
   content: z.string().max(12000).default(""),
   content_json: z.unknown().nullable().optional(),
   content_format: z.enum(["plain", "rich"]).default("plain"),
+  text_sizing_mode: z.enum(["auto_width", "auto_height", "fixed"]).default("fixed"),
   media_source: z.enum(["url", "upload"]).nullable().default(null),
   media_path: z.string().max(1024).nullable().default(null),
   media_mime: z.string().max(255).nullable().default(null),
@@ -132,7 +133,7 @@ export const noteCreateSchema = z.object({
   x: z.coerce.number().finite(),
   y: z.coerce.number().finite(),
   width: z.coerce.number().min(100).max(1200),
-  height: z.coerce.number().min(80).max(900),
+  height: z.coerce.number().min(38).max(900),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).default(DEFAULT_NOTE_COLOR),
   z_index: z.coerce.number().int().min(1),
 });
@@ -151,7 +152,8 @@ export const notePositionSchema = z.object({
 export const noteSizeSchema = z.object({
   id: z.string().uuid(),
   width: z.number().min(100).max(1200),
-  height: z.number().min(80).max(900),
+  height: z.number().min(38).max(900),
+  text_sizing_mode: z.enum(["auto_width", "auto_height", "fixed"]).optional(),
 });
 
 export const noteDeleteSchema = z.object({

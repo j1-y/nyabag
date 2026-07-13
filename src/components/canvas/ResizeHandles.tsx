@@ -3,12 +3,13 @@
 import { useRef } from "react";
 import { useNotes } from "@/hooks/useNotes";
 import { maybeSnap } from "@/lib/canvas-grid";
-import type { CanvasNote, CanvasViewport } from "@/lib/types";
+import type { CanvasNote, TextSizingMode } from "@/lib/types";
 
 type Direction = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
 
 const MIN_W = 100;
 const MIN_H = 80;
+const MIN_TEXT_FRAME_H = 38;
 const MAX_W = 1200;
 const MAX_H = 900;
 
@@ -34,16 +35,16 @@ export function ResizeHandles({ note }: ResizeHandlesProps) {
     startY: number;
   } | null>(null);
   const resizeFrameRef = useRef<number | null>(null);
-  const pendingResizeRef = useRef<{ width: number; height: number; x: number; y: number; movePosition: boolean } | null>(null);
+  const pendingResizeRef = useRef<{ width: number; height: number; x: number; y: number; movePosition: boolean; textSizingMode?: TextSizingMode } | null>(null);
 
-  function scheduleResize(width: number, height: number, x: number, y: number, movePosition: boolean) {
-    pendingResizeRef.current = { width, height, x, y, movePosition };
+  function scheduleResize(width: number, height: number, x: number, y: number, movePosition: boolean, textSizingMode?: TextSizingMode) {
+    pendingResizeRef.current = { width, height, x, y, movePosition, textSizingMode };
     if (resizeFrameRef.current !== null) return;
     resizeFrameRef.current = requestAnimationFrame(() => {
       resizeFrameRef.current = null;
       const pending = pendingResizeRef.current;
       if (!pending) return;
-      setNoteSize(note.id, pending.width, pending.height);
+      setNoteSize(note.id, pending.width, pending.height, pending.textSizingMode);
       if (pending.movePosition) setNotePosition(note.id, pending.x, pending.y);
     });
   }
@@ -70,6 +71,10 @@ export function ResizeHandles({ note }: ResizeHandlesProps) {
     const dx = (e.clientX - startPX) / scale;
     const dy = (e.clientY - startPY) / scale;
     const shouldSnap = !e.altKey;
+    const minHeight = note.type === "text_frame" ? MIN_TEXT_FRAME_H : MIN_H;
+    const textSizingMode: TextSizingMode | undefined = note.type === "text_frame"
+      ? dir === "e" || dir === "w" ? "auto_height" : "fixed"
+      : undefined;
 
     let newW = startW;
     let newH = startH;
@@ -83,15 +88,15 @@ export function ResizeHandles({ note }: ResizeHandlesProps) {
       newX = maybeSnap(newX, shouldSnap);
       newW = clamp(startX + startW - newX, MIN_W, MAX_W);
     }
-    if (dir.includes("s")) newH = clamp(maybeSnap(clamp(startH + dy, MIN_H, MAX_H), shouldSnap), MIN_H, MAX_H);
+    if (dir.includes("s")) newH = clamp(maybeSnap(clamp(startH + dy, minHeight, MAX_H), shouldSnap), minHeight, MAX_H);
     if (dir.includes("n")) {
-      newH = clamp(maybeSnap(clamp(startH - dy, MIN_H, MAX_H), shouldSnap), MIN_H, MAX_H);
+      newH = clamp(maybeSnap(clamp(startH - dy, minHeight, MAX_H), shouldSnap), minHeight, MAX_H);
       newY = startY + (startH - newH);
       newY = maybeSnap(newY, shouldSnap);
-      newH = clamp(startY + startH - newY, MIN_H, MAX_H);
+      newH = clamp(startY + startH - newY, minHeight, MAX_H);
     }
 
-    scheduleResize(newW, newH, newX, newY, dir.includes("w") || dir.includes("n"));
+    scheduleResize(newW, newH, newX, newY, dir.includes("w") || dir.includes("n"), textSizingMode);
   }
 
   function handlePointerUp() {
@@ -101,12 +106,12 @@ export function ResizeHandles({ note }: ResizeHandlesProps) {
       resizeFrameRef.current = null;
       const pending = pendingResizeRef.current;
       if (pending) {
-        setNoteSize(note.id, pending.width, pending.height);
+        setNoteSize(note.id, pending.width, pending.height, pending.textSizingMode);
         if (pending.movePosition) setNotePosition(note.id, pending.x, pending.y);
       }
     }
     const pending = pendingResizeRef.current;
-    commitSize(note.id, pending?.width ?? note.width, pending?.height ?? note.height);
+    commitSize(note.id, pending?.width ?? note.width, pending?.height ?? note.height, pending?.textSizingMode);
     if (dragRef.current.dir.includes("w") || dragRef.current.dir.includes("n")) {
       commitPosition(note.id, pending?.x ?? note.x, pending?.y ?? note.y);
     }

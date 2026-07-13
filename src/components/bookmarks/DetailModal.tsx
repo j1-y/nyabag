@@ -5,6 +5,7 @@ import { IconArrowUpRight, IconDelete, IconFile, IconImage, IconMaximize, IconPa
 import { useState } from "react";
 import { getDomain, getTagColor } from "@/lib/data";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
+import { formatBookmarkNote } from "@/lib/bookmarks/format-note";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,7 +100,7 @@ export function DetailModal() {
           {b.note && (
             <div className="meta-block">
               <p className="meta-label"><HugeIcon icon={IconFile} /> Note</p>
-              <p className="meta-note">{b.note}</p>
+              <p className="meta-note">{formatBookmarkNote(b.note)}</p>
             </div>
           )}
 

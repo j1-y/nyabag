@@ -16,6 +16,7 @@ export const CANVAS_NOTE_COLUMNS = [
   "media_name",
   "content_json",
   "content_format",
+  "text_sizing_mode",
   "x",
   "y",
   "width",

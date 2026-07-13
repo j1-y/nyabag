@@ -87,6 +87,7 @@
 - Validation steps:
   - Run `npm run build`
   - Check the affected route in the browser if the change is visual
+  - For canvas text sizing changes, verify auto-width creation, side-handle auto-height transition, vertical/corner fixed transition, persistence after reload, and non-text resize minimums.
 - Memory updates required:
   - Update the surface entry and any changed route description
 

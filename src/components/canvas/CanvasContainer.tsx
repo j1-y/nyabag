@@ -25,7 +25,7 @@ const WHEEL_LINE_HEIGHT = 16;
 
 const NOTE_DEFAULT_SIZE: Record<NoteType, { width: number; height: number }> = {
   text: { width: 280, height: 280 },
-  text_frame: { width: 240, height: 80 },
+  text_frame: { width: 240, height: 38 },
   link: { width: 280, height: 280 },
   image: { width: 280, height: 280 },
   video: { width: 280, height: 280 },

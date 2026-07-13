@@ -385,6 +385,7 @@ Important fields:
 | `section_id` | Optional section membership |
 | `type` | `text`, `link`, `image`, `video`, or `social` |
 | `content` | Text, link URL, video URL, or social-prefixed URL |
+| `text_sizing_mode` | Text-frame sizing: `auto_width`, `auto_height`, or `fixed` |
 | `media_source` | `url`, `upload`, or null |
 | `media_path` | Private Supabase Storage path |
 | `media_mime` | Uploaded media MIME type |
@@ -398,7 +399,7 @@ Important constraints:
 
 - Note type check includes `social`.
 - Media source must be null, `url`, or `upload`.
-- Width min 100, height min 80 through application validation.
+- Width min 100. Text frames use a 38px one-line minimum; other note types retain the 80px height minimum.
 - RLS restricts rows to the owner and workspace membership.
 
 ### `canvas_sections`
@@ -490,7 +491,7 @@ Security is enforced at several layers:
    - Media URLs are normalized and rejected if invalid.
 
 6. **Extension web-session auth layer**
-   - `NYABAG_CHROME_EXTENSION_IDS` pins allowed Chrome identity redirect hosts.
+   - The official Web Store extension id `ljgccanoebeimhommihhmkhpdcdmemie` is pinned in server code; `NYABAG_CHROME_EXTENSION_IDS` adds optional development or alternate Chrome identity redirect hosts.
    - `/api/extension/auth/start` validates redirect URI and state before reading the web session.
    - One-time exchange codes are short-lived, user-scoped, hashed at rest, and consumed with a single conditional update.
    - `/api/extension/auth/exchange` returns normal Supabase tokens; extension APIs continue to verify them with `Authorization: Bearer <access_token>`.
@@ -663,6 +664,7 @@ Important behavior:
 - Image/video tools open `MediaNoteDialog` first.
 - Once media is selected, `pendingMediaNote` is stored and placement mode is armed.
 - Notes can be click-created at default size or drag-created at custom size.
+- Click-created text frames start in `auto_width`, horizontal side resizing switches them to width-constrained `auto_height`, and vertical/corner resizing switches them to `fixed`; the mode is persisted with dimensions.
 - Delete actions refresh from an authoritative server snapshot to avoid stale client notes.
 
 ### Canvas Pan and Zoom
@@ -839,7 +841,7 @@ Modules:
 
 | Function | Purpose |
 | --- | --- |
-| `validateChromeIdentityRedirectUri(...)` | Accept only `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirects from `NYABAG_CHROME_EXTENSION_IDS` |
+| `validateChromeIdentityRedirectUri(...)` | Accept only exact `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirects from the pinned official id or optional `NYABAG_CHROME_EXTENSION_IDS` entries |
 | `validateExtensionAuthState(...)` | Validate bounded URL-safe state values |
 | `createExtensionExchangeCode(...)` | Generate and store a hashed five-minute one-time code for the authenticated user |
 | `consumeExtensionExchangeCode(...)` | Atomically consume a matching unexpired code exactly once |
@@ -1051,10 +1053,9 @@ http://localhost:3000
    - `canvas-media`
    - `profile-avatars`
 4. Add Supabase environment variables to `.env.local`.
-5. Add `NYABAG_CHROME_EXTENSION_IDS=<chrome-extension-id>` for browser-extension web-session login.
-6. If `NYABAG_CHROME_EXTENSION_IDS` is missing in production, `/api/extension/auth/start` fails closed with a 500 diagnostic naming that env var.
-7. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
-8. Restart the dev server.
+5. Optionally add `NYABAG_CHROME_EXTENSION_IDS=<development-extension-id>` for locally loaded or alternate browser-extension builds; the official Web Store id is already pinned server-side.
+6. Add `CORTEX_API_URL=https://your-cortex-render-url.onrender.com` and `CORTEX_INTERNAL_API_KEY` for server-to-server Cortex search and delete cleanup.
+7. Restart the dev server.
 
 ### Vercel Deployment
 
@@ -1063,8 +1064,8 @@ http://localhost:3000
 3. Add Supabase environment variables.
 4. Deploy.
 5. Confirm Supabase auth redirect settings include the deployed domain.
-6. Configure `NYABAG_CHROME_EXTENSION_IDS` with the production Chrome extension id.
-7. Keep the local `.env.local` and deployment env aligned so the extension auth allowlist matches the installed extension id.
+6. Configure `NYABAG_CHROME_EXTENSION_IDS` only when development or alternate Chrome extension ids also need access.
+7. Keep optional local and deployment allowlists aligned for non-Web-Store builds.
 
 ## Build, Lint, and Quality Status
 

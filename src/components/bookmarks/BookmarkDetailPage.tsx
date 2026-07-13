@@ -1,13 +1,15 @@
 "use client";
 
 import { HugeIcon } from "@/components/ui/huge-icon";
-import { IconArrowLeft, IconArrowUpRight, IconDelete, IconLoader, IconMessage, IconPalette, IconRefresh, IconSparkles, IconTag, IconText } from "@/components/ui/icons";
+import { IconArrowLeft, IconArrowUpRight, IconDelete, IconLoader, IconPalette, IconRefresh, IconSparkles, IconTag, IconText } from "@/components/ui/icons";
 import { useEffect, useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 ;
 import { deleteBookmark, getProcessingBookmarks, refreshBookmarkScreenshot, retryBookmarkProcessing } from "@/lib/actions";
 import { getDomain } from "@/lib/data";
 import { getBookmarkDisplayScreenshot } from "@/lib/bookmarks/screenshots";
+import { formatBookmarkNote } from "@/lib/bookmarks/format-note";
 import type { Bookmark } from "@/lib/types";
 import { BookmarksProvider } from "@/hooks/useBookmarks";
 import { Button } from "@/components/ui/button";
@@ -107,8 +109,14 @@ function BookmarkDetailInner({ bookmark }: { bookmark: Bookmark }) {
 
           {currentBookmark.note && (
             <div className="detail-note-card">
-              <HugeIcon icon={IconMessage} size={18} />
-              <p>{currentBookmark.note}</p>
+              <Image
+                className="detail-note-card__mark"
+                src="/assets/Nyabag-Logomark.svg"
+                alt=""
+                width={18}
+                height={18}
+              />
+              <p>{formatBookmarkNote(currentBookmark.note)}</p>
             </div>
           )}
 

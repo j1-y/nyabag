@@ -43,6 +43,7 @@
 
 - Canonical schema: `supabase/schema.sql`
 - First-party workspaces are the main content boundary. Existing rows keep `user_id` as creator/owner metadata, while `workspace_id` scopes bookmarks, folders, canvas notes/sections, captures, onboarding, Cortex records, and processing jobs.
+- Canvas `text_frame` rows persist `text_sizing_mode` (`auto_width`, `auto_height`, or `fixed`) so Figma-style content fitting survives reloads; non-text notes remain fixed-size.
 - Active workspace state uses the `nyabag-active-workspace-id` cookie. The server accepts it only when the authenticated user has a `workspace_members` row, then falls back to the newest membership or auto-created `Personal` workspace.
 - Extension auth handoff codes live in `extension_auth_codes`; only SHA-256 code hashes are stored, and service-role route handlers consume them exactly once.
 - Private canvas media bucket: `canvas-media`
@@ -80,7 +81,7 @@
 - Legacy `/app/*` links are compatibility redirects only; do not add duplicate `/app` routes.
 - Server actions must continue to enforce auth and ownership checks.
 - Server actions must resolve workspace context server-side and filter mutations by both `user_id` and `workspace_id` where the table is workspace-scoped.
-- Chrome extension web-session login requires `NYABAG_CHROME_EXTENSION_IDS` and only accepts `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirect URIs.
+- Chrome extension web-session login pins the official Web Store id `ljgccanoebeimhommihhmkhpdcdmemie` in server code, accepts optional comma-separated development ids from `NYABAG_CHROME_EXTENSION_IDS`, and only allows exact `https://<allowed-id>.chromiumapp.org/nyabag-auth` redirect URIs.
 - Unauthenticated extension start requests redirect to `/login?next=<original start url>`, and the login/signup pages preserve that `next` value so the extension auth flow resumes after web auth instead of dropping into the normal dashboard path.
 - Extension bearer-auth failures return stable `AUTH_*` codes alongside their existing status and message so extension clients can show actionable diagnostics without exposing credentials.
 - Extension clients bind stored sessions to the API origin and validate exchanged or cookie-derived sessions through `/api/extension/me`; `/api/extension/captures` is the single endpoint for bookmark-style saves and screenshot binaries. It may accept an optional `workspaceId`, but service-role handlers must only use it after membership validation and otherwise fall back to the user's default workspace.
